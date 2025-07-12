@@ -27,7 +27,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Heart className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">MedCare</span>
+            <span className="text-2xl font-bold text-gray-900">MEDuza</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
@@ -284,7 +284,7 @@ export default function HomePage() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Heart className="h-6 w-6 text-blue-400" />
-                <span className="text-xl font-bold">MedCare</span>
+                <span className="text-xl font-bold">MEDuza</span>
               </div>
               <p className="text-gray-400 text-sm">
                 Nowoczesna platforma do zarządzania opieką medyczną. Bezpieczna,
@@ -357,7 +357,7 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 MedCare. Wszystkie prawa zastrzeżone.</p>
+            <p>&copy; 2025 MEDuza. Wszystkie prawa zastrzeżone.</p>
           </div>
         </div>
       </footer>
