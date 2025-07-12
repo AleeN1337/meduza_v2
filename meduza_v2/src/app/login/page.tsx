@@ -52,7 +52,16 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password);
       toast.success("Pomyślnie zalogowano!");
-      router.push("/dashboard");
+
+      // Get user from store to check role
+      const userRole = useAuthStore.getState().user?.role;
+
+      // Redirect based on role
+      if (userRole === "doctor") {
+        router.push("/doctor/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       toast.error("Błąd logowania. Sprawdź dane i spróbuj ponownie.");
     }

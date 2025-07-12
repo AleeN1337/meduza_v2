@@ -31,20 +31,41 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // For now, just pass through - we'll add JWT verification later
+  // Role-based route protection
+  const authRole = request.cookies.get("auth-role")?.value;
+  const authStorage = request.cookies.get("auth-storage")?.value;
+  let userRole = authRole; // First try the simple cookie
+
+  // Fallback to parsing the auth storage
+  if (!userRole && authStorage) {
+    try {
+      const parsedAuth = JSON.parse(authStorage);
+      userRole = parsedAuth.state?.user?.role;
+    } catch (error) {
+      console.error("Failed to parse auth storage:", error);
+    }
+  }
+
+  console.log("Middleware - User role:", userRole, "Path:", pathname);
+
+  // Redirect based on role for dashboard access
+  if (pathname === "/dashboard" && userRole === "doctor") {
+    return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
+  }
+
+  // Protect doctor routes
+  if (pathname.startsWith("/doctor") && userRole !== "doctor") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Protect patient routes
+  if (pathname.startsWith("/dashboard") && userRole === "doctor") {
+    return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (authentication routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)",
-  ],
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)"],
 };

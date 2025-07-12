@@ -37,7 +37,11 @@ export default function DashboardPage() {
     if (!isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+    // Redirect doctors to their dashboard
+    if (user && user.role === "doctor") {
+      router.push("/doctor/dashboard");
+    }
+  }, [isAuthenticated, user, router]);
 
   const handleLogout = () => {
     logout();
@@ -123,29 +127,35 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Heart className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">MedCare</span>
+              <span className="text-2xl font-bold text-gray-900">MEDuza</span>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <Button variant="outline" size="sm">
                 <Bell className="h-4 w-4 mr-2" />
                 Powiadomienia
                 {notifications.length > 0 && (
-                  <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                  <Badge
+                    variant="destructive"
+                    className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
+                  >
                     {notifications.length}
                   </Badge>
                 )}
               </Button>
-              
+
               <div className="flex items-center space-x-2">
                 <Avatar>
                   <AvatarImage src={user.avatar} />
                   <AvatarFallback>
-                    {user.firstName[0]}{user.lastName[0]}
+                    {user.firstName[0]}
+                    {user.lastName[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-sm">
-                  <p className="font-medium">{user.firstName} {user.lastName}</p>
+                  <p className="font-medium">
+                    {user.firstName} {user.lastName}
+                  </p>
                   <p className="text-gray-500">Pacjent</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
@@ -182,7 +192,10 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Link href="/dashboard/appointments/book">
-                    <Button variant="outline" className="h-auto flex-col py-4 w-full">
+                    <Button
+                      variant="outline"
+                      className="h-auto flex-col py-4 w-full"
+                    >
                       <Calendar className="h-6 w-6 mb-2 text-blue-600" />
                       <span className="text-sm">Umów wizytę</span>
                     </Button>
@@ -192,7 +205,10 @@ export default function DashboardPage() {
                     <span className="text-sm">Chat z lekarzem</span>
                   </Button>
                   <Link href="/dashboard/medical-history">
-                    <Button variant="outline" className="h-auto flex-col py-4 w-full">
+                    <Button
+                      variant="outline"
+                      className="h-auto flex-col py-4 w-full"
+                    >
                       <FileText className="h-6 w-6 mb-2 text-purple-600" />
                       <span className="text-sm">Moja dokumentacja</span>
                     </Button>
@@ -286,7 +302,9 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <Badge
-                        variant={result.status === "normal" ? "default" : "destructive"}
+                        variant={
+                          result.status === "normal" ? "default" : "destructive"
+                        }
                       >
                         {result.status === "normal" ? "Norma" : "Nieprawidłowy"}
                       </Badge>
@@ -306,15 +324,18 @@ export default function DashboardPage() {
                   <Pill className="h-5 w-5 mr-2 text-orange-600" />
                   Aktywne recepty
                 </CardTitle>
-                <CardDescription>
-                  Twoje obecne leki i ich ilość
-                </CardDescription>
+                <CardDescription>Twoje obecne leki i ich ilość</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {activePrescriptions.map((prescription) => (
-                    <div key={prescription.id} className="border-l-4 border-orange-500 pl-4">
-                      <h4 className="font-semibold">{prescription.medication}</h4>
+                    <div
+                      key={prescription.id}
+                      className="border-l-4 border-orange-500 pl-4"
+                    >
+                      <h4 className="font-semibold">
+                        {prescription.medication}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         {prescription.dosage} - {prescription.frequency}
                       </p>
@@ -345,7 +366,9 @@ export default function DashboardPage() {
                       key={notification.id}
                       className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500"
                     >
-                      <h5 className="font-medium text-sm">{notification.title}</h5>
+                      <h5 className="font-medium text-sm">
+                        {notification.title}
+                      </h5>
                       <p className="text-xs text-gray-600 mt-1">
                         {notification.message}
                       </p>

@@ -10,9 +10,56 @@ export interface User {
   role: "patient" | "doctor" | "admin";
   avatar?: string;
   phone?: string;
-  specialization?: string; // for doctors
-  dateOfBirth?: string; // for patients
+
+  // Common fields
+  dateOfBirth?: string;
   gender?: "male" | "female" | "other";
+
+  // Doctor specific fields
+  specialization?: string;
+  licenseNumber?: string;
+  workplace?: string;
+  address?: string;
+  bio?: string;
+  languages?: string[];
+  education?: Array<{
+    id: number;
+    degree: string;
+    institution: string;
+    year: string;
+    description: string;
+  }>;
+  experience?: Array<{
+    id: number;
+    position: string;
+    institution: string;
+    period: string;
+    description: string;
+  }>;
+  certifications?: Array<{
+    id: number;
+    name: string;
+    issuer: string;
+    year: string;
+    valid: string;
+  }>;
+  availableHours?: {
+    [key: string]: {
+      start: string;
+      end: string;
+      available: boolean;
+    };
+  };
+  consultationFee?: number;
+
+  // Patient specific fields
+  bloodType?: string;
+  allergies?: string[];
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
 }
 
 // Auth store
@@ -24,6 +71,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  updateUser: (userData: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -71,10 +119,22 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
           });
+          // Clear the role cookie
+          if (typeof document !== "undefined") {
+            document.cookie =
+              "auth-role=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+          }
         },
 
         setUser: (user: User) => {
           set({ user });
+        },
+
+        updateUser: (userData: Partial<User>) => {
+          const currentUser = get().user;
+          if (currentUser) {
+            set({ user: { ...currentUser, ...userData } });
+          }
         },
 
         setLoading: (loading: boolean) => {

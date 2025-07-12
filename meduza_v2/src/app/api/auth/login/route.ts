@@ -69,12 +69,21 @@ export async function POST(request: NextRequest) {
       gender: user.gender,
     };
 
-    return NextResponse.json({
-      success: true,
-      message: "Pomyślnie zalogowano",
-      user: userData,
-      token,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Pomyślnie zalogowano",
+        user: userData,
+        token,
+      },
+      {
+        headers: {
+          "Set-Cookie": `auth-role=${
+            user.role
+          }; Path=/; HttpOnly; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
+        },
+      }
+    );
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
