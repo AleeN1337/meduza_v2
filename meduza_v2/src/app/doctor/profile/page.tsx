@@ -90,7 +90,7 @@ export default function DoctorProfilePage() {
       monthlyPatients: Math.floor((user?.totalPatients || 0) * 0.6),
       averageRating: user?.averageRating || 0,
       reviewsCount: user?.reviewsCount || 0,
-      yearsExperience: user?.experience?.length || 0,
+      yearsExperience: user?.experience || 0,
       successRate: 0,
     },
   };
@@ -98,7 +98,20 @@ export default function DoctorProfilePage() {
   const handleSave = () => {
     updateUser({
       ...user,
-      ...editedProfile,
+      firstName: editedProfile.firstName,
+      lastName: editedProfile.lastName,
+      email: editedProfile.email,
+      phone: editedProfile.phone,
+      specialization: editedProfile.specialization,
+      licenseNumber: editedProfile.licenseNumber,
+      workplace: editedProfile.workplace,
+      address: editedProfile.address,
+      bio: editedProfile.bio,
+      languages: editedProfile.languages,
+      education: editedProfile.education,
+      certifications: editedProfile.certifications,
+      availableHours: editedProfile.availableHours,
+      consultationFee: editedProfile.consultationFee,
     });
     setIsEditing(false);
   };
@@ -467,26 +480,39 @@ export default function DoctorProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {doctorData.education.map((edu) => (
-                      <div
-                        key={edu.id}
-                        className="flex items-start justify-between p-4 bg-gray-50 rounded-lg"
-                      >
-                        <div>
-                          <h4 className="font-semibold">{edu.degree}</h4>
-                          <p className="text-sm text-gray-600">
-                            {edu.institution}
-                          </p>
-                          <p className="text-sm text-gray-500">{edu.year}</p>
-                          <p className="text-sm mt-1">{edu.description}</p>
+                    {doctorData.education && doctorData.education.length > 0 ? (
+                      doctorData.education.map((edu, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start justify-between p-4 bg-gray-50 rounded-lg"
+                        >
+                          <div>
+                            <h4 className="font-semibold">{edu.degree}</h4>
+                            <p className="text-sm text-gray-600">
+                              {edu.institution}
+                            </p>
+                            <p className="text-sm text-gray-500">{edu.year}</p>
+                            <p className="text-sm mt-1">{edu.description}</p>
+                          </div>
+                          {isEditing && (
+                            <Button size="sm" variant="ghost">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                        {isEditing && (
-                          <Button size="sm" variant="ghost">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 mb-2">
+                          Brak dodanego wykształcenia
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Dodaj swoje wykształcenie, aby pacjenci mogli lepiej
+                          Cię poznać
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -509,26 +535,30 @@ export default function DoctorProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {doctorData.experience.map((exp) => (
-                      <div
-                        key={exp.id}
-                        className="flex items-start justify-between p-4 bg-gray-50 rounded-lg"
-                      >
-                        <div>
-                          <h4 className="font-semibold">{exp.position}</h4>
-                          <p className="text-sm text-gray-600">
-                            {exp.institution}
-                          </p>
-                          <p className="text-sm text-gray-500">{exp.period}</p>
-                          <p className="text-sm mt-1">{exp.description}</p>
+                    {typeof doctorData.experience === "number" &&
+                    doctorData.experience > 0 ? (
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="h-5 w-5 text-gray-500" />
+                          <span className="font-semibold">
+                            {doctorData.experience} lat doświadczenia
+                          </span>
                         </div>
-                        {isEditing && (
-                          <Button size="sm" variant="ghost">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <p className="text-sm text-gray-600 mt-2">
+                          Doświadczenie w praktyce medycznej
+                        </p>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="text-center py-8">
+                        <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 mb-2">
+                          Brak dodanego doświadczenia
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Dodaj informacje o swoim doświadczeniu zawodowym
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -551,26 +581,38 @@ export default function DoctorProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {doctorData.certifications.map((cert) => (
-                      <div key={cert.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold">{cert.name}</h4>
-                            <p className="text-sm text-gray-600">
-                              {cert.issuer}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Wydano: {cert.year} • Ważny do: {cert.validUntil}
-                            </p>
+                    {doctorData.certifications &&
+                    doctorData.certifications.length > 0 ? (
+                      doctorData.certifications.map((cert, index) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold">{cert.name}</h4>
+                              <p className="text-sm text-gray-600">
+                                {cert.issuer}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Wydano: {cert.year} • Ważny do:{" "}
+                                {cert.validUntil}
+                              </p>
+                            </div>
+                            {isEditing && (
+                              <Button size="sm" variant="ghost">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
-                          {isEditing && (
-                            <Button size="sm" variant="ghost">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-8">
+                        <Award className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 mb-2">Brak certyfikatów</p>
+                        <p className="text-sm text-gray-400">
+                          Dodaj swoje certyfikaty i uprawnienia medyczne
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
