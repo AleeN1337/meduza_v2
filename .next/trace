@@ -3,3 +3,6 @@
 [{"name":"next-dev","duration":577593,"timestamp":176878841588,"id":1,"tags":{},"startTime":1752227901357,"traceId":"aaff26b595dca3fe"}]
 [{"name":"next-dev","duration":595003,"timestamp":176970452058,"id":1,"tags":{},"startTime":1752227992967,"traceId":"d8ad06b2a79e8905"}]
 [{"name":"next-dev","duration":593606,"timestamp":177110138678,"id":1,"tags":{},"startTime":1752228132654,"traceId":"520dd7b82edbc7c6"}]
+[{"name":"next-dev","duration":843194,"timestamp":274733726768,"id":1,"tags":{},"startTime":1752325756040,"traceId":"7590dcfc6f9ad597"}]
+[{"name":"next-dev","duration":799109,"timestamp":275036264875,"id":1,"tags":{},"startTime":1752326058579,"traceId":"1d62a9fe33757e38"}]
+[{"name":"next-dev","duration":639846,"timestamp":548138256212,"id":1,"tags":{},"startTime":1752599159355,"traceId":"2221abe31ab1c445"}]
