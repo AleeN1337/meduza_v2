@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [allergies, setAllergies] = useState(["Penicylina", "Pyłki traw"]);
+  const [allergies, setAllergies] = useState(user?.allergies || []);
   const [newAllergy, setNewAllergy] = useState("");
 
   const form = useForm<ProfileFormData>({
@@ -75,17 +75,16 @@ export default function ProfilePage() {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       phone: user?.phone || "",
-      dateOfBirth: user?.dateOfBirth || "",
+      dateOfBirth: user?.dateOfBirth
+        ? new Date(user.dateOfBirth).toISOString().split("T")[0]
+        : "",
       gender: user?.gender || undefined,
-      bloodType: "A+", // mock data
+      bloodType: user?.bloodType || "",
     },
   });
 
-  const emergencyContact = {
-    name: "Anna Nowak",
-    phone: "+48 123 456 789",
-    relationship: "Matka",
-  };
+  // Use real emergency contact data or show empty state
+  const emergencyContact = user?.emergencyContact || null;
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
@@ -414,25 +413,39 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Imię i nazwisko</Label>
-                      <p className="font-medium">{emergencyContact.name}</p>
+                  {emergencyContact ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Imię i nazwisko</Label>
+                        <p className="font-medium">{emergencyContact.name}</p>
+                      </div>
+                      <div>
+                        <Label>Telefon</Label>
+                        <p className="font-medium">{emergencyContact.phone}</p>
+                      </div>
+                      <div>
+                        <Label>Relacja</Label>
+                        <p className="font-medium">
+                          {emergencyContact.relationship}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Telefon</Label>
-                      <p className="font-medium">{emergencyContact.phone}</p>
-                    </div>
-                    <div>
-                      <Label>Relacja</Label>
-                      <p className="font-medium">
-                        {emergencyContact.relationship}
+                  ) : (
+                    <div className="text-center py-6">
+                      <Phone className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-500 mb-2">
+                        Brak kontaktu awaryjnego
+                      </p>
+                      <p className="text-sm text-gray-400 mb-4">
+                        Dodaj osobę kontaktową na wypadek sytuacji awaryjnej
                       </p>
                     </div>
-                  </div>
+                  )}
                   {isEditing && (
                     <Button variant="outline" className="mt-4">
-                      Edytuj kontakt awaryjny
+                      {emergencyContact
+                        ? "Edytuj kontakt awaryjny"
+                        : "Dodaj kontakt awaryjny"}
                     </Button>
                   )}
                 </CardContent>

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store";
+import { Appointment, LabResult, Prescription, Notification } from "@/types";
 import {
   Card,
   CardContent,
@@ -50,74 +51,16 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  // Mock data - w przyszłości z API
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctorName: "Dr. Anna Kowalska",
-      specialty: "Kardiolog",
-      date: "2025-07-15",
-      time: "10:00",
-      type: "Konsultacja",
-    },
-    {
-      id: 2,
-      doctorName: "Dr. Piotr Nowak",
-      specialty: "Dermatolog",
-      date: "2025-07-18",
-      time: "14:30",
-      type: "Kontrola",
-    },
-  ];
+  // Empty states for new patients - no mock data
+  const upcomingAppointments = user.upcomingAppointments || [];
+  const recentResults = user.recentResults || [];
+  const activePrescriptions = user.activePrescriptions || [];
+  const notifications = user.notifications || [];
 
-  const recentResults = [
-    {
-      id: 1,
-      testName: "Morfologia krwi",
-      date: "2025-07-10",
-      status: "normal" as const,
-    },
-    {
-      id: 2,
-      testName: "Cholesterol",
-      date: "2025-07-08",
-      status: "abnormal" as const,
-    },
-  ];
-
-  const activePrescriptions = [
-    {
-      id: 1,
-      medication: "Amlodipine",
-      dosage: "5mg",
-      frequency: "1x dziennie",
-      remaining: 15,
-    },
-    {
-      id: 2,
-      medication: "Metformin",
-      dosage: "500mg",
-      frequency: "2x dziennie",
-      remaining: 8,
-    },
-  ];
-
-  const notifications = [
-    {
-      id: 1,
-      title: "Przypomnienie o wizycie",
-      message: "Wizyta u Dr. Kowalskiej już jutro o 10:00",
-      time: "2 godz. temu",
-      type: "appointment" as const,
-    },
-    {
-      id: 2,
-      title: "Nowe wyniki badań",
-      message: "Dostępne są wyniki morfologii krwi",
-      time: "1 dzień temu",
-      type: "results" as const,
-    },
-  ];
+  // Check if patient has any real medical data
+  const hasAppointments = upcomingAppointments.length > 0;
+  const hasResults = recentResults.length > 0;
+  const hasPrescriptions = activePrescriptions.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -229,47 +172,66 @@ export default function DashboardPage() {
                     <Calendar className="h-5 w-5 mr-2 text-blue-600" />
                     Nadchodzące wizyty
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Zobacz wszystkie
-                    <ChevronRight className="h-4 w-4 ml-1" />
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/dashboard/appointments">
+                      Zobacz wszystkie
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Link>
                   </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {upcomingAppointments.map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <Stethoscope className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {appointment.doctorName}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {appointment.specialty}
-                          </p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">
-                              {appointment.date} o {appointment.time}
-                            </span>
-                            <Badge variant="secondary" className="text-xs">
-                              {appointment.type}
-                            </Badge>
+                {hasAppointments ? (
+                  <div className="space-y-4">
+                    {upcomingAppointments.map((appointment) => (
+                      <div
+                        key={appointment.id}
+                        className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            <Stethoscope className="h-8 w-8 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {appointment.doctorName}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {appointment.specialty}
+                            </p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {appointment.date} o {appointment.time}
+                              </span>
+                              <Badge variant="secondary" className="text-xs">
+                                {appointment.type}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
+                        <Button variant="outline" size="sm">
+                          Szczegóły
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        Szczegóły
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-4">
+                      Brak zaplanowanych wizyt
+                    </p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Umów swoją pierwszą wizytę z lekarzem
+                    </p>
+                    <Button asChild>
+                      <Link href="/dashboard/appointments/book">
+                        Umów wizytę
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -281,36 +243,54 @@ export default function DashboardPage() {
                     <Activity className="h-5 w-5 mr-2 text-green-600" />
                     Ostatnie wyniki badań
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Zobacz wszystkie
-                    <ChevronRight className="h-4 w-4 ml-1" />
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/dashboard/medical-history">
+                      Zobacz wszystkie
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Link>
                   </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentResults.map((result) => (
-                    <div
-                      key={result.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <TestTube className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">{result.testName}</p>
-                          <p className="text-sm text-gray-500">{result.date}</p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          result.status === "normal" ? "default" : "destructive"
-                        }
+                {hasResults ? (
+                  <div className="space-y-3">
+                    {recentResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
                       >
-                        {result.status === "normal" ? "Norma" : "Nieprawidłowy"}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                        <div className="flex items-center space-x-3">
+                          <TestTube className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="font-medium">{result.testName}</p>
+                            <p className="text-sm text-gray-500">
+                              {result.date}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            result.status === "normal"
+                              ? "default"
+                              : "destructive"
+                          }
+                        >
+                          {result.status === "normal"
+                            ? "Norma"
+                            : "Nieprawidłowy"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <TestTube className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-2">Brak wyników badań</p>
+                    <p className="text-sm text-gray-400">
+                      Wyniki badań pojawią się tutaj po pierwszych wizytach
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -327,27 +307,39 @@ export default function DashboardPage() {
                 <CardDescription>Twoje obecne leki i ich ilość</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {activePrescriptions.map((prescription) => (
-                    <div
-                      key={prescription.id}
-                      className="border-l-4 border-orange-500 pl-4"
-                    >
-                      <h4 className="font-semibold">
-                        {prescription.medication}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {prescription.dosage} - {prescription.frequency}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pozostało: {prescription.remaining} tabletek
-                      </p>
+                {hasPrescriptions ? (
+                  <>
+                    <div className="space-y-4">
+                      {activePrescriptions.map((prescription) => (
+                        <div
+                          key={prescription.id}
+                          className="border-l-4 border-orange-500 pl-4"
+                        >
+                          <h4 className="font-semibold">
+                            {prescription.medicationName}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {prescription.dosage} - {prescription.frequency}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Status: {prescription.status}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  Zobacz wszystkie recepty
-                </Button>
+                    <Button variant="outline" size="sm" className="w-full mt-4">
+                      Zobacz wszystkie recepty
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Pill className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-2">Brak aktywnych recept</p>
+                    <p className="text-sm text-gray-400">
+                      Recepty pojawią się po wizytach u lekarza
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -360,27 +352,39 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500"
-                    >
-                      <h5 className="font-medium text-sm">
-                        {notification.title}
-                      </h5>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {notification.time}
-                      </p>
+                {notifications.length > 0 ? (
+                  <>
+                    <div className="space-y-3">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500"
+                        >
+                          <h5 className="font-medium text-sm">
+                            {notification.title}
+                          </h5>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {notification.createdAt}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="w-full mt-4">
-                  Zobacz wszystkie
-                </Button>
+                    <Button variant="ghost" size="sm" className="w-full mt-4">
+                      Zobacz wszystkie
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Bell className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-2">Brak powiadomień</p>
+                    <p className="text-sm text-gray-400">
+                      Ważne informacje pojawią się tutaj
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -394,21 +398,68 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Grupa krwi</span>
-                    <Badge variant="outline">A+</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Alergie</span>
-                    <Badge variant="outline">Penicylina</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Kontakt awaryjny</span>
-                    <span className="text-sm text-gray-600">Anna Nowak</span>
-                  </div>
+                  {user.bloodType ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Grupa krwi</span>
+                      <Badge variant="outline">{user.bloodType}</Badge>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">Grupa krwi</span>
+                      <span className="text-sm text-gray-400">Nie podano</span>
+                    </div>
+                  )}
+
+                  {user.allergies && user.allergies.length > 0 ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Alergie</span>
+                      <div className="flex gap-1 flex-wrap">
+                        {user.allergies.slice(0, 2).map((allergy, index) => (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {allergy}
+                          </Badge>
+                        ))}
+                        {user.allergies.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{user.allergies.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">Alergie</span>
+                      <span className="text-sm text-gray-400">Brak</span>
+                    </div>
+                  )}
+
+                  {user.emergencyContact ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Kontakt awaryjny</span>
+                      <span className="text-sm text-gray-600">
+                        {user.emergencyContact.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">
+                        Kontakt awaryjny
+                      </span>
+                      <span className="text-sm text-gray-400">Nie podano</span>
+                    </div>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  Edytuj profil medyczny
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-4"
+                  asChild
+                >
+                  <Link href="/dashboard/profile">Edytuj profil medyczny</Link>
                 </Button>
               </CardContent>
             </Card>

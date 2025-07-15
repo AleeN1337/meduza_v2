@@ -64,80 +64,34 @@ export default function DoctorProfilePage() {
     consultationFee: user?.consultationFee || 0,
   });
 
-  // Mock data - dane lekarza
+  // Use real user data instead of mock data
   const doctorData = {
     ...user,
-    licenseNumber: "PWZ 1234567",
-    workplace: "Szpital Wojewódzki im. Biegańskiego w Łodzi",
-    address: "ul. Kniaziewicza 1/5, 91-347 Łódź",
-    bio: "Doświadczony kardiolog z 15-letnim stażem. Specjalizuję się w diagnostyce i leczeniu chorób układu sercowo-naczyniowego. Ukończyłem studia medyczne na Uniwersytecie Medycznym w Łodzi oraz specjalizację z kardiologii.",
-    languages: ["Polski", "Angielski", "Niemiecki"],
-    education: [
-      {
-        id: 1,
-        degree: "Lekarz medycyny",
-        institution: "Uniwersytet Medyczny w Łodzi",
-        year: "2008",
-        description: "Studia medyczne - dyplom z wyróżnieniem",
-      },
-      {
-        id: 2,
-        degree: "Specjalista Kardiolog",
-        institution: "Collegium Medicum UJ",
-        year: "2014",
-        description: "Specjalizacja II stopnia z kardiologii",
-      },
-    ],
-    experience: [
-      {
-        id: 1,
-        position: "Starszy Asystent",
-        institution: "Klinika Kardiologii UCK",
-        period: "2014 - 2018",
-        description:
-          "Praca w klinice kardiologii, diagnostyka i leczenie pacjentów",
-      },
-      {
-        id: 2,
-        position: "Ordynator Oddziału",
-        institution: "Szpital Wojewódzki",
-        period: "2018 - obecnie",
-        description: "Kierowanie oddziałem kardiologii, 50-osobowy zespół",
-      },
-    ],
-    certifications: [
-      {
-        id: 1,
-        name: "Certyfikat EKG",
-        issuer: "European Society of Cardiology",
-        year: "2020",
-        valid: "2025",
-      },
-      {
-        id: 2,
-        name: "Echokardiografia",
-        issuer: "Polskie Towarzystwo Kardiologiczne",
-        year: "2019",
-        valid: "2024",
-      },
-    ],
-    availableHours: {
-      monday: { start: "08:00", end: "16:00", available: true },
-      tuesday: { start: "08:00", end: "16:00", available: true },
-      wednesday: { start: "08:00", end: "14:00", available: true },
-      thursday: { start: "08:00", end: "16:00", available: true },
-      friday: { start: "08:00", end: "14:00", available: true },
-      saturday: { start: "09:00", end: "13:00", available: false },
+    licenseNumber: user?.licenseNumber || "",
+    workplace: user?.workplace || "",
+    address: user?.address || "",
+    bio: user?.bio || "",
+    languages: user?.languages || [],
+    education: user?.education || [],
+    experience: user?.experience || [],
+    certifications: user?.certifications || [],
+    availableHours: user?.availableHours || {
+      monday: { start: "", end: "", available: false },
+      tuesday: { start: "", end: "", available: false },
+      wednesday: { start: "", end: "", available: false },
+      thursday: { start: "", end: "", available: false },
+      friday: { start: "", end: "", available: false },
+      saturday: { start: "", end: "", available: false },
       sunday: { start: "", end: "", available: false },
     },
-    consultationFee: 150,
+    consultationFee: user?.consultationFee || 0,
     statistics: {
-      totalPatients: 1247,
-      monthlyPatients: 89,
-      averageRating: 4.8,
-      reviewsCount: 156,
-      yearsExperience: 15,
-      successRate: 94,
+      totalPatients: user?.totalPatients || 0,
+      monthlyPatients: Math.floor((user?.totalPatients || 0) * 0.6),
+      averageRating: user?.averageRating || 0,
+      reviewsCount: user?.reviewsCount || 0,
+      yearsExperience: user?.experience?.length || 0,
+      successRate: 0,
     },
   };
 
@@ -606,7 +560,7 @@ export default function DoctorProfilePage() {
                               {cert.issuer}
                             </p>
                             <p className="text-sm text-gray-500">
-                              Wydano: {cert.year} • Ważny do: {cert.valid}
+                              Wydano: {cert.year} • Ważny do: {cert.validUntil}
                             </p>
                           </div>
                           {isEditing && (

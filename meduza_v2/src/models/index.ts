@@ -14,11 +14,44 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
 
+  // Profile completion tracking
+  profileCompleted?: boolean;
+  profileCompletionPercentage?: number;
+  lastProfileUpdate?: Date;
+
   // Doctor specific fields
   specialization?: string;
   licenseNumber?: string;
   experience?: number;
-  education?: string[];
+  education?: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+    description?: string;
+  }>;
+  certifications?: Array<{
+    name: string;
+    issuer: string;
+    year: string;
+    validUntil?: string;
+  }>;
+  workplace?: string;
+  address?: string;
+  bio?: string;
+  languages?: string[];
+  availableHours?: {
+    [key: string]: {
+      start: string;
+      end: string;
+      available: boolean;
+    };
+  };
+  consultationFee?: number;
+
+  // Doctor statistics (auto-calculated)
+  totalPatients?: number;
+  averageRating?: number;
+  reviewsCount?: number;
 
   // Patient specific fields
   dateOfBirth?: Date;
@@ -30,6 +63,36 @@ export interface IUser extends Document {
     phone: string;
     relationship: string;
   };
+
+  // Patient medical data (references to other collections)
+  upcomingAppointments?: Array<{
+    id: string;
+    doctorName: string;
+    specialty: string;
+    date: string;
+    time: string;
+    type: string;
+  }>;
+  recentResults?: Array<{
+    id: string;
+    testName: string;
+    date: string;
+    status: "normal" | "abnormal" | "critical";
+  }>;
+  activePrescriptions?: Array<{
+    id: string;
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    status: string;
+  }>;
+  notifications?: Array<{
+    id: string;
+    title: string;
+    message: string;
+    type: string;
+    createdAt: string;
+  }>;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -68,11 +131,66 @@ const UserSchema = new Schema<IUser>(
       default: true,
     },
 
+    // Profile completion tracking
+    profileCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    profileCompletionPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    lastProfileUpdate: Date,
+
     // Doctor specific fields
     specialization: String,
     licenseNumber: String,
     experience: Number,
-    education: [String],
+    education: [
+      {
+        degree: String,
+        institution: String,
+        year: String,
+        description: String,
+      },
+    ],
+    certifications: [
+      {
+        name: String,
+        issuer: String,
+        year: String,
+        validUntil: String,
+      },
+    ],
+    workplace: String,
+    address: String,
+    bio: String,
+    languages: [String],
+    availableHours: {
+      type: Map,
+      of: {
+        start: String,
+        end: String,
+        available: Boolean,
+      },
+    },
+    consultationFee: Number,
+
+    // Doctor statistics (auto-calculated)
+    totalPatients: {
+      type: Number,
+      default: 0,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+    reviewsCount: {
+      type: Number,
+      default: 0,
+    },
 
     // Patient specific fields
     dateOfBirth: Date,
@@ -87,6 +205,47 @@ const UserSchema = new Schema<IUser>(
       phone: String,
       relationship: String,
     },
+
+    // Patient medical data (initially empty arrays for new patients)
+    upcomingAppointments: [
+      {
+        id: String,
+        doctorName: String,
+        specialty: String,
+        date: String,
+        time: String,
+        type: String,
+      },
+    ],
+    recentResults: [
+      {
+        id: String,
+        testName: String,
+        date: String,
+        status: {
+          type: String,
+          enum: ["normal", "abnormal", "critical"],
+        },
+      },
+    ],
+    activePrescriptions: [
+      {
+        id: String,
+        medicationName: String,
+        dosage: String,
+        frequency: String,
+        status: String,
+      },
+    ],
+    notifications: [
+      {
+        id: String,
+        title: String,
+        message: String,
+        type: String,
+        createdAt: String,
+      },
+    ],
   },
   {
     timestamps: true,

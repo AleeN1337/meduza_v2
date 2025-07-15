@@ -15,7 +15,40 @@ export interface User {
   specialization?: string;
   licenseNumber?: string;
   experience?: number;
-  education?: string[];
+  education?: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+    description?: string;
+  }>;
+  certifications?: Array<{
+    name: string;
+    issuer: string;
+    year: string;
+    validUntil?: string;
+  }>;
+  workplace?: string;
+  address?: string;
+  bio?: string;
+  languages?: string[];
+  availableHours?: {
+    [key: string]: {
+      start: string;
+      end: string;
+      available: boolean;
+    };
+  };
+  consultationFee?: number;
+
+  // Profile completion tracking
+  profileCompleted?: boolean;
+  profileCompletionPercentage?: number;
+  lastProfileUpdate?: string;
+
+  // Doctor statistics
+  totalPatients?: number;
+  averageRating?: number;
+  reviewsCount?: number;
 
   // Patient specific fields
   dateOfBirth?: string;
@@ -27,6 +60,36 @@ export interface User {
     phone: string;
     relationship: string;
   };
+
+  // Patient medical data (initially empty for new patients)
+  upcomingAppointments?: Array<{
+    id: string;
+    doctorName: string;
+    specialty: string;
+    date: string;
+    time: string;
+    type: string;
+  }>;
+  recentResults?: Array<{
+    id: string;
+    testName: string;
+    date: string;
+    status: "normal" | "abnormal" | "critical";
+  }>;
+  activePrescriptions?: Array<{
+    id: string;
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    status: string;
+  }>;
+  notifications?: Array<{
+    id: string;
+    title: string;
+    message: string;
+    type: string;
+    createdAt: string;
+  }>;
 }
 
 export interface LoginCredentials {

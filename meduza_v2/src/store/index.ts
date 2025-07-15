@@ -1,66 +1,6 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-
-// User types
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: "patient" | "doctor" | "admin";
-  avatar?: string;
-  phone?: string;
-
-  // Common fields
-  dateOfBirth?: string;
-  gender?: "male" | "female" | "other";
-
-  // Doctor specific fields
-  specialization?: string;
-  licenseNumber?: string;
-  workplace?: string;
-  address?: string;
-  bio?: string;
-  languages?: string[];
-  education?: Array<{
-    id: number;
-    degree: string;
-    institution: string;
-    year: string;
-    description: string;
-  }>;
-  experience?: Array<{
-    id: number;
-    position: string;
-    institution: string;
-    period: string;
-    description: string;
-  }>;
-  certifications?: Array<{
-    id: number;
-    name: string;
-    issuer: string;
-    year: string;
-    valid: string;
-  }>;
-  availableHours?: {
-    [key: string]: {
-      start: string;
-      end: string;
-      available: boolean;
-    };
-  };
-  consultationFee?: number;
-
-  // Patient specific fields
-  bloodType?: string;
-  allergies?: string[];
-  emergencyContact?: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-}
+import { User } from "@/types";
 
 // Auth store
 interface AuthState {
@@ -73,7 +13,97 @@ interface AuthState {
   setUser: (user: User) => void;
   updateUser: (userData: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
+  calculateProfileCompletion: (user: User) => number;
 }
+
+// Helper function to calculate profile completion percentage
+const calculateProfileCompletion = (user: User): number => {
+  if (user.role === "doctor") {
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "specialization",
+      "licenseNumber",
+      "bio",
+      "workplace",
+      "address",
+    ];
+    const optionalFields = [
+      "avatar",
+      "education",
+      "certifications",
+      "languages",
+      "availableHours",
+      "consultationFee",
+    ];
+
+    let score = 0;
+    const totalFields = requiredFields.length + optionalFields.length;
+
+    // Required fields (70% weight)
+    const requiredScore = requiredFields.filter((field) => {
+      const value = user[field as keyof User];
+      if (Array.isArray(value)) return value.length > 0;
+      return value && value.toString().trim() !== "";
+    }).length;
+
+    // Optional fields (30% weight)
+    const optionalScore = optionalFields.filter((field) => {
+      const value = user[field as keyof User];
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === "object" && value !== null)
+        return Object.keys(value).length > 0;
+      return value && value.toString().trim() !== "";
+    }).length;
+
+    score = Math.round(
+      (requiredScore / requiredFields.length) * 70 +
+        (optionalScore / optionalFields.length) * 30
+    );
+    return Math.min(100, Math.max(0, score));
+  } else if (user.role === "patient") {
+    const requiredFields = [
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "dateOfBirth",
+      "gender",
+    ];
+    const optionalFields = [
+      "avatar",
+      "bloodType",
+      "allergies",
+      "emergencyContact",
+    ];
+
+    let score = 0;
+    const totalFields = requiredFields.length + optionalFields.length;
+
+    const requiredScore = requiredFields.filter((field) => {
+      const value = user[field as keyof User];
+      return value && value.toString().trim() !== "";
+    }).length;
+
+    const optionalScore = optionalFields.filter((field) => {
+      const value = user[field as keyof User];
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === "object" && value !== null)
+        return Object.keys(value).length > 0;
+      return value && value.toString().trim() !== "";
+    }).length;
+
+    score = Math.round(
+      (requiredScore / requiredFields.length) * 80 +
+        (optionalScore / optionalFields.length) * 20
+    );
+    return Math.min(100, Math.max(0, score));
+  }
+
+  return 0;
+};
 
 export const useAuthStore = create<AuthState>()(
   devtools(
@@ -133,13 +163,20 @@ export const useAuthStore = create<AuthState>()(
         updateUser: (userData: Partial<User>) => {
           const currentUser = get().user;
           if (currentUser) {
-            set({ user: { ...currentUser, ...userData } });
+            const updatedUser = { ...currentUser, ...userData };
+            // Auto-update profile completion percentage
+            updatedUser.profileCompletionPercentage =
+              calculateProfileCompletion(updatedUser);
+            updatedUser.lastProfileUpdate = new Date().toISOString();
+            set({ user: updatedUser });
           }
         },
 
         setLoading: (loading: boolean) => {
           set({ isLoading: loading });
         },
+
+        calculateProfileCompletion: calculateProfileCompletion,
       }),
       {
         name: "auth-storage",
