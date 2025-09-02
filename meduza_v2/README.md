@@ -1,3 +1,18 @@
+# Profile updates and avatar upload
+
+Environment variables required in .env.local:
+
+- MONGODB_URI
+- JWT_SECRET
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+
+Endpoints:
+
+- PATCH /api/profile — update patient profile fields
+- POST /api/profile/avatar — upload avatar (multipart form-data with field "file" or JSON { image: dataUrl })
+
 # 🩺 MEDuza - System Zarządzania Zdrowiem
 
 ![MEDuza Logo](https://img.shields.io/badge/MEDuza-Healthcare%20Management-blue?style=for-the-badge&logo=heart)

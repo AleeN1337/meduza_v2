@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,6 +68,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [allergies, setAllergies] = useState(user?.allergies || []);
   const [newAllergy, setNewAllergy] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -88,15 +89,21 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      // Symulacja update'u profilu - w przyszłości API call
-      if (user) {
-        const updatedUser = {
-          ...user,
-          ...data,
-        };
-        setUser(updatedUser);
+      // Persist to API
+      const token = useAuthStore.getState().token;
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...data, allergies }),
+      });
+      if (!response.ok) throw new Error("Update failed");
+      const res = await response.json();
+      if (res?.user) {
+        useAuthStore.getState().updateUser(res.user);
       }
-
       toast.success("Profil został zaktualizowany!");
       setIsEditing(false);
     } catch (error) {
@@ -115,6 +122,35 @@ export default function ProfilePage() {
   const removeAllergy = (allergyToRemove: string) => {
     setAllergies(allergies.filter((allergy) => allergy !== allergyToRemove));
     toast.success("Usunięto alergię");
+  };
+
+  const handleAvatarClick = () => fileInputRef.current?.click();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const token = useAuthStore.getState().token;
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const json = await res.json();
+      if (json?.url) {
+        useAuthStore.getState().updateUser({ avatar: json.url });
+        toast.success("Zaktualizowano zdjęcie profilowe");
+      }
+    } catch (err) {
+      toast.error("Nie udało się przesłać zdjęcia");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   if (!user) return null;
@@ -186,10 +222,23 @@ export default function ProfilePage() {
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
-                    <Button variant="outline" size="sm">
-                      <Camera className="h-4 w-4 mr-2" />
-                      Zmień zdjęcie
-                    </Button>
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAvatarClick}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Zmień zdjęcie
+                      </Button>
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -303,6 +352,24 @@ export default function ProfilePage() {
                             )}
                           />
                         </div>
+
+                        <FormField
+                          control={form.control}
+                          name="bloodType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Grupa krwi</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  disabled={!isEditing}
+                                  placeholder="np. A+"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         {isEditing && (
                           <div className="flex space-x-2">

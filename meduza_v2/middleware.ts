@@ -10,8 +10,11 @@ export async function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
-  // Skip middleware for API auth routes
-  if (pathname.startsWith("/api/auth/")) {
+  // Skip middleware for API auth/profile routes
+  if (
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/profile")
+  ) {
     return NextResponse.next();
   }
 
