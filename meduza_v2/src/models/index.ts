@@ -57,7 +57,11 @@ export interface IUser extends Document {
   dateOfBirth?: Date;
   gender?: "male" | "female" | "other";
   bloodType?: string;
+  height?: number;
+  weight?: number;
   allergies?: string[];
+  medications?: string[];
+  conditions?: string[];
   emergencyContact?: {
     name: string;
     phone: string;
@@ -199,7 +203,11 @@ const UserSchema = new Schema<IUser>(
       enum: ["male", "female", "other"],
     },
     bloodType: String,
+    height: Number,
+    weight: Number,
     allergies: [String],
+    medications: [String],
+    conditions: [String],
     emergencyContact: {
       name: String,
       phone: String,

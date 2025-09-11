@@ -54,6 +54,8 @@ export interface User {
   dateOfBirth?: string;
   gender?: "male" | "female" | "other";
   bloodType?: string;
+  height?: string;
+  weight?: string;
   allergies?: string[];
   emergencyContact?: {
     name: string;
