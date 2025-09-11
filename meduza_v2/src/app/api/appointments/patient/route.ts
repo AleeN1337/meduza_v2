@@ -93,16 +93,18 @@ export async function GET(request: NextRequest) {
         console.log("Processing appointment:", appointment._id);
         console.log("Doctor data:", appointment.doctorId);
 
-        if (!appointment.doctorId) {
-          console.error("Doctor not found for appointment:", appointment._id);
-          return null;
-        }
+        const doctorName = appointment.doctorId
+          ? `${appointment.doctorId.firstName} ${appointment.doctorId.lastName}`
+          : "Lekarz nieznany";
+        const specialty =
+          appointment.doctorId?.specialization || "Specjalizacja nieznana";
+        const avatar = appointment.doctorId?.avatar || null;
 
         return {
           id: appointment._id,
-          doctorName: `${appointment.doctorId.firstName} ${appointment.doctorId.lastName}`,
-          specialty: appointment.doctorId.specialization,
-          avatar: appointment.doctorId.avatar,
+          doctorName,
+          specialty,
+          avatar,
           date: appointment.date.toISOString().split("T")[0],
           time: appointment.time,
           type: appointment.type,

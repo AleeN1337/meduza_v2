@@ -87,7 +87,7 @@ export default function DashboardPage() {
       try {
         console.log("Making API request...");
         const response = await fetch(
-          "/api/appointments/patient?upcoming=true&limit=5&includePast=true",
+          "/api/appointments/patient?status=all&limit=50",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -153,19 +153,22 @@ export default function DashboardPage() {
       if (response.ok) {
         // Add to cancelled appointments set
         setCancelledAppointments((prev) => new Set(prev).add(appointmentId));
+        console.log("Added to cancelled set:", appointmentId);
 
         // Set timer to hide cancelled appointment after 5 seconds
         setTimeout(() => {
+          console.log("Timer fired for appointment:", appointmentId);
           setCancelledAppointments((prev) => {
             const newSet = new Set(prev);
             newSet.delete(appointmentId);
+            console.log("Removed from cancelled set:", appointmentId);
             return newSet;
           });
         }, 5000);
 
         // Refresh appointments list
         const fetchResponse = await fetch(
-          "/api/appointments/patient?upcoming=true&limit=5&includePast=true",
+          "/api/appointments/patient?status=all&limit=50",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -207,7 +210,22 @@ export default function DashboardPage() {
 
   // Filter appointments based on show all state and cancelled status
   const visibleAppointments = upcomingAppointments
-    .filter((appointment) => !cancelledAppointments.has(appointment.id))
+    .filter((appointment) => {
+      // Hide appointments that are in cancelledAppointments set OR have cancelled status from API
+      // For debugging, let's show all appointments first
+      console.log(
+        "Appointment:",
+        appointment.id,
+        "Status:",
+        appointment.status,
+        "In cancelled set:",
+        cancelledAppointments.has(appointment.id)
+      );
+      return (
+        !cancelledAppointments.has(appointment.id) &&
+        appointment.status !== "cancelled"
+      );
+    })
     .sort((a, b) => {
       // Sort by date and time
       const dateA = new Date(`${a.date}T${a.time}`);
@@ -404,9 +422,6 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2">
-                          <Button variant="outline" size="sm">
-                            Szczegóły
-                          </Button>
                           {appointment.status === "scheduled" && (
                             <Button
                               variant="destructive"
