@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store";
@@ -28,11 +28,33 @@ import {
   Heart,
   Stethoscope,
   TestTube,
+  Loader2,
+  X,
 } from "lucide-react";
 
+interface DashboardAppointment {
+  id: string;
+  doctorName: string;
+  specialty: string;
+  avatar?: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  notes?: string;
+  symptoms?: string;
+  duration: number;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, token, logout } = useAuthStore();
   const router = useRouter();
+  const [upcomingAppointments, setUpcomingAppointments] = useState<
+    DashboardAppointment[]
+  >([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,15 +66,114 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, user, router]);
 
+  // Fetch upcoming appointments
+  useEffect(() => {
+    const fetchUpcomingAppointments = async () => {
+      console.log("useEffect triggered");
+      console.log("Token available:", !!token);
+      console.log("User available:", !!user);
+
+      if (!token || !user) {
+        console.log("Missing token or user, skipping fetch");
+        return;
+      }
+
+      try {
+        console.log("Making API request...");
+        const response = await fetch(
+          "/api/appointments/patient?upcoming=true&limit=5&includePast=true",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        console.log("Response status:", response.status);
+        console.log("Response ok:", response.ok);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("API Response:", data);
+          if (data.success) {
+            console.log("Setting appointments:", data.appointments);
+            setUpcomingAppointments(data.appointments);
+            console.log("Appointments loaded:", data.appointments);
+          } else {
+            console.error("API returned error:", data.message);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error(
+            "API request failed:",
+            response.status,
+            response.statusText
+          );
+          console.error("Error response:", errorText);
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        console.error("Token:", token);
+        console.error("User:", user);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+
+    fetchUpcomingAppointments();
+  }, [token, user]);
+
   const handleLogout = () => {
     logout();
     router.push("/");
   };
 
+  const handleCancelAppointment = async (appointmentId: string) => {
+    if (!token) return;
+
+    setCancellingAppointment(appointmentId);
+
+    try {
+      const response = await fetch(
+        `/api/appointments/cancel?id=${appointmentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Refresh appointments list
+        const fetchResponse = await fetch(
+          "/api/appointments/patient?upcoming=true&limit=5&includePast=true",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (fetchResponse.ok) {
+          const data = await fetchResponse.json();
+          if (data.success) {
+            setUpcomingAppointments(data.appointments);
+          }
+        }
+      } else {
+        console.error("Failed to cancel appointment");
+      }
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+    } finally {
+      setCancellingAppointment(null);
+    }
+  };
+
   if (!user) return null;
 
   // Empty states for new patients - no mock data
-  const upcomingAppointments = user.upcomingAppointments || [];
   const recentResults = user.recentResults || [];
   const activePrescriptions = user.activePrescriptions || [];
   const notifications = user.notifications || [];
@@ -181,7 +302,12 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {hasAppointments ? (
+                {loadingAppointments ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Ładowanie wizyt...</span>
+                  </div>
+                ) : hasAppointments ? (
                   <div className="space-y-4">
                     {upcomingAppointments.map((appointment) => (
                       <div
@@ -210,9 +336,28 @@ export default function DashboardPage() {
                             </div>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Szczegóły
-                        </Button>
+                        <div className="flex flex-col space-y-2">
+                          <Button variant="outline" size="sm">
+                            Szczegóły
+                          </Button>
+                          {appointment.status === "scheduled" && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleCancelAppointment(appointment.id)}
+                              disabled={cancellingAppointment === appointment.id}
+                            >
+                              {cancellingAppointment === appointment.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Anulowanie...
+                                </>
+                              ) : (
+                                "Anuluj wizytę"
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
