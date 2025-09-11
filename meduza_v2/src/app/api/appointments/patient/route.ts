@@ -64,11 +64,12 @@ export async function GET(request: NextRequest) {
       if (searchParams.get("includePast") === "true") {
         query.date = {
           $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
-        }; // Last 30 days
+        };
+        query.status = { $nin: ["completed"] }; // Show all except completed
       } else {
         query.date = { $gte: now };
+        query.status = { $in: ["scheduled", "rescheduled"] };
       }
-      query.status = { $in: ["scheduled", "rescheduled"] };
       console.log("Upcoming query:", query);
     }
 

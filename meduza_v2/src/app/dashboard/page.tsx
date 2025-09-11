@@ -54,7 +54,13 @@ export default function DashboardPage() {
     DashboardAppointment[]
   >([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
-  const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
+  const [cancellingAppointment, setCancellingAppointment] = useState<
+    string | null
+  >(null);
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
+  const [cancelledAppointments, setCancelledAppointments] = useState<
+    Set<string>
+  >(new Set());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -145,6 +151,18 @@ export default function DashboardPage() {
       );
 
       if (response.ok) {
+        // Add to cancelled appointments set
+        setCancelledAppointments((prev) => new Set(prev).add(appointmentId));
+
+        // Set timer to hide cancelled appointment after 5 seconds
+        setTimeout(() => {
+          setCancelledAppointments((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(appointmentId);
+            return newSet;
+          });
+        }, 5000);
+
         // Refresh appointments list
         const fetchResponse = await fetch(
           "/api/appointments/patient?upcoming=true&limit=5&includePast=true",
@@ -162,13 +180,22 @@ export default function DashboardPage() {
           }
         }
       } else {
-        console.error("Failed to cancel appointment");
+        const errorText = await response.text();
+        console.error(
+          "Cancel appointment failed with status:",
+          response.status
+        );
+        console.error("Error response:", errorText);
       }
     } catch (error) {
       console.error("Error cancelling appointment:", error);
     } finally {
       setCancellingAppointment(null);
     }
+  };
+
+  const handleToggleShowAll = () => {
+    setShowAllAppointments(!showAllAppointments);
   };
 
   if (!user) return null;
@@ -178,8 +205,23 @@ export default function DashboardPage() {
   const activePrescriptions = user.activePrescriptions || [];
   const notifications = user.notifications || [];
 
+  // Filter appointments based on show all state and cancelled status
+  const visibleAppointments = upcomingAppointments
+    .filter((appointment) => !cancelledAppointments.has(appointment.id))
+    .sort((a, b) => {
+      // Sort by date and time
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+  // Show only first 3 appointments unless "show all" is clicked
+  const displayedAppointments = showAllAppointments
+    ? visibleAppointments
+    : visibleAppointments.slice(0, 3);
+
   // Check if patient has any real medical data
-  const hasAppointments = upcomingAppointments.length > 0;
+  const hasAppointments = visibleAppointments.length > 0;
   const hasResults = recentResults.length > 0;
   const hasPrescriptions = activePrescriptions.length > 0;
 
@@ -293,11 +335,19 @@ export default function DashboardPage() {
                     <Calendar className="h-5 w-5 mr-2 text-blue-600" />
                     Nadchodzące wizyty
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/dashboard/appointments">
-                      Zobacz wszystkie
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToggleShowAll}
+                  >
+                    {showAllAppointments
+                      ? "Pokaż mniej"
+                      : `Zobacz wszystkie ${
+                          visibleAppointments.length > 3
+                            ? `(${visibleAppointments.length - 3} więcej)`
+                            : ""
+                        }`}
+                    <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </CardTitle>
               </CardHeader>
@@ -309,14 +359,22 @@ export default function DashboardPage() {
                   </div>
                 ) : hasAppointments ? (
                   <div className="space-y-4">
-                    {upcomingAppointments.map((appointment) => (
+                    {displayedAppointments.map((appointment) => (
                       <div
                         key={appointment.id}
-                        className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200"
+                        className={`flex items-center justify-between p-4 rounded-lg border ${
+                          appointment.status === "cancelled"
+                            ? "bg-red-50 border-red-200"
+                            : "bg-blue-50 border-blue-200"
+                        }`}
                       >
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
-                            <Stethoscope className="h-8 w-8 text-blue-600" />
+                            {appointment.status === "cancelled" ? (
+                              <X className="h-8 w-8 text-red-600" />
+                            ) : (
+                              <Stethoscope className="h-8 w-8 text-blue-600" />
+                            )}
                           </div>
                           <div>
                             <h4 className="font-semibold text-gray-900">
@@ -330,8 +388,17 @@ export default function DashboardPage() {
                               <span className="text-sm text-gray-600">
                                 {appointment.date} o {appointment.time}
                               </span>
-                              <Badge variant="secondary" className="text-xs">
-                                {appointment.type}
+                              <Badge
+                                variant={
+                                  appointment.status === "cancelled"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {appointment.status === "cancelled"
+                                  ? "Anulowana"
+                                  : appointment.type}
                               </Badge>
                             </div>
                           </div>
@@ -344,8 +411,17 @@ export default function DashboardPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleCancelAppointment(appointment.id)}
-                              disabled={cancellingAppointment === appointment.id}
+                              onClick={() => {
+                                console.log(
+                                  "Cancelling appointment:",
+                                  appointment.id
+                                );
+                                console.log("Appointment data:", appointment);
+                                handleCancelAppointment(appointment.id);
+                              }}
+                              disabled={
+                                cancellingAppointment === appointment.id
+                              }
                             >
                               {cancellingAppointment === appointment.id ? (
                                 <>
