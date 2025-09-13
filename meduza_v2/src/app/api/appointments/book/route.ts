@@ -88,6 +88,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculate appointment fee based on type
+    let appointmentFee = 150; // Default fee
+    if (doctor.consultationFee) {
+      switch (type) {
+        case "consultation":
+          appointmentFee = doctor.consultationFee;
+          break;
+        case "follow-up":
+        case "check-up":
+          appointmentFee = doctor.followUpFee || doctor.consultationFee;
+          break;
+        case "emergency":
+          appointmentFee = doctor.urgentFee || 250;
+          break;
+        default:
+          appointmentFee = doctor.consultationFee;
+      }
+    }
+
     // Create appointment
     const appointment = new Appointment({
       patientId: decoded.userId,
@@ -95,6 +114,7 @@ export async function POST(request: NextRequest) {
       date: new Date(date),
       time,
       type,
+      fee: appointmentFee,
       notes,
       symptoms,
       status: "scheduled",
@@ -154,6 +174,7 @@ export async function POST(request: NextRequest) {
           date: appointment.date.toISOString().split("T")[0],
           time: appointment.time,
           type: appointment.type,
+          fee: appointment.fee,
           status: appointment.status,
         },
       },

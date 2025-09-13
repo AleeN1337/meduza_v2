@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -40,88 +40,79 @@ import {
   MoreVertical,
   Clock,
   Activity,
+  Loader2,
 } from "lucide-react";
+import { useAuthStore } from "@/store";
+
+interface Patient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: string;
+  bloodType: string;
+  allergies: string[];
+  medications: string[];
+  conditions: string[];
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  lastVisit: string | null;
+  nextAppointment: string | null;
+  totalVisits: number;
+  status: string;
+  avatar: string | null;
+  notes: string;
+}
 
 export default function DoctorPatientsPage() {
   const router = useRouter();
+  const { user, token } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - lista pacjentów
-  const patients = [
-    {
-      id: 1,
-      firstName: "Jan",
-      lastName: "Kowalski",
-      email: "jan.kowalski@email.com",
-      phone: "+48 123 456 789",
-      dateOfBirth: "1980-05-15",
-      gender: "male",
-      bloodType: "A+",
-      lastVisit: "2025-07-10",
-      nextAppointment: "2025-07-20",
-      status: "active",
-      allergies: ["Penicylina"],
-      chronicConditions: ["Nadciśnienie tętnicze"],
-      totalVisits: 12,
-      avatar: null,
-      notes: "Pacjent regularnie kontroluje ciśnienie",
-    },
-    {
-      id: 2,
-      firstName: "Anna",
-      lastName: "Nowak",
-      email: "anna.nowak@email.com",
-      phone: "+48 987 654 321",
-      dateOfBirth: "1975-12-03",
-      gender: "female",
-      bloodType: "B-",
-      lastVisit: "2025-07-08",
-      nextAppointment: null,
-      status: "active",
-      allergies: ["Pyłki traw", "Orzechy"],
-      chronicConditions: [],
-      totalVisits: 5,
-      avatar: null,
-      notes: "Nowy pacjent, wymaga szczegółowej analizy",
-    },
-    {
-      id: 3,
-      firstName: "Piotr",
-      lastName: "Wiśniewski",
-      email: "piotr.wisniewski@email.com",
-      phone: "+48 555 666 777",
-      dateOfBirth: "1965-08-22",
-      gender: "male",
-      bloodType: "O+",
-      lastVisit: "2025-06-25",
-      nextAppointment: "2025-07-15",
-      status: "needs-attention",
-      allergies: [],
-      chronicConditions: ["Cukrzyca", "Nadciśnienie tętnicze"],
-      totalVisits: 28,
-      avatar: null,
-      notes: "Wymaga ścisłej kontroli poziomu cukru",
-    },
-    {
-      id: 4,
-      firstName: "Maria",
-      lastName: "Zielińska",
-      email: "maria.zielinska@email.com",
-      phone: "+48 111 222 333",
-      dateOfBirth: "1990-03-10",
-      gender: "female",
-      bloodType: "AB+",
-      lastVisit: "2025-07-12",
-      nextAppointment: "2025-08-01",
-      status: "active",
-      allergies: ["Latex"],
-      chronicConditions: [],
-      totalVisits: 3,
-      avatar: null,
-      notes: "Młoda pacjentka, pierwsza ciąża",
-    },
-  ];
+  // Fetch patients on component mount
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!token || !user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/patients", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPatients(data.patients);
+          } else {
+            setError(data.message || "Nie udało się pobrać listy pacjentów");
+          }
+        } else {
+          setError("Wystąpił błąd podczas ładowania pacjentów");
+        }
+      } catch (error) {
+        console.error("Error fetching patients:", error);
+        setError("Wystąpił błąd podczas ładowania pacjentów");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, [token, user]);
 
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
@@ -134,7 +125,9 @@ export default function DoctorPatientsPage() {
       (selectedFilter === "active" && patient.status === "active") ||
       (selectedFilter === "attention" &&
         patient.status === "needs-attention") ||
-      (selectedFilter === "recent" && patient.lastVisit >= "2025-07-01");
+      (selectedFilter === "recent" &&
+        patient.lastVisit &&
+        patient.lastVisit >= "2025-07-01");
 
     return matchesSearch && matchesFilter;
   });
@@ -144,7 +137,9 @@ export default function DoctorPatientsPage() {
     activePatients: patients.filter((p) => p.status === "active").length,
     needsAttention: patients.filter((p) => p.status === "needs-attention")
       .length,
-    recentVisits: patients.filter((p) => p.lastVisit >= "2025-07-01").length,
+    recentVisits: patients.filter(
+      (p) => p.lastVisit && p.lastVisit >= "2025-07-01"
+    ).length,
   };
 
   const calculateAge = (birthDate: string) => {
@@ -371,21 +366,23 @@ export default function DoctorPatientsPage() {
                       </div>
                     )}
 
-                    {patient.chronicConditions.length > 0 && (
+                    {patient.conditions.length > 0 && (
                       <div>
                         <p className="text-sm font-medium text-orange-700 mb-1">
                           Choroby przewlekłe:
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {patient.chronicConditions.map((condition, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {condition}
-                            </Badge>
-                          ))}
+                          {patient.conditions.map(
+                            (condition: string, index: number) => (
+                              <Badge
+                                key={index}
+                                variant="secondary"
+                                className="text-xs"
+                              >
+                                {condition}
+                              </Badge>
+                            )
+                          )}
                         </div>
                       </div>
                     )}

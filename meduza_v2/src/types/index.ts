@@ -39,6 +39,9 @@ export interface User {
     };
   };
   consultationFee?: number;
+  followUpFee?: number;
+  urgentFee?: number;
+  onlineFee?: number;
 
   // Profile completion tracking
   profileCompleted?: boolean;
@@ -134,6 +137,7 @@ export interface Appointment {
   duration: number; // in minutes
   status: "scheduled" | "completed" | "cancelled" | "no-show" | "rescheduled";
   type: "consultation" | "follow-up" | "emergency" | "routine" | "check-up";
+  fee?: number; // Cost of the appointment
   notes?: string;
   symptoms?: string;
   diagnosis?: string;

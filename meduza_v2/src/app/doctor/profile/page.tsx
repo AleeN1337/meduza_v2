@@ -70,6 +70,9 @@ export default function DoctorProfilePage() {
       sunday: { start: "09:00", end: "17:00", available: false },
     },
     consultationFee: user?.consultationFee?.toString() || "0",
+    followUpFee: user?.followUpFee?.toString() || "0",
+    urgentFee: user?.urgentFee?.toString() || "0",
+    onlineFee: user?.onlineFee?.toString() || "0",
   });
 
   // Use real user data instead of mock data
@@ -93,6 +96,9 @@ export default function DoctorProfilePage() {
       sunday: { start: "09:00", end: "17:00", available: false },
     },
     consultationFee: user?.consultationFee || 0,
+    followUpFee: user?.followUpFee || 0,
+    urgentFee: user?.urgentFee || 0,
+    onlineFee: user?.onlineFee || 0,
     statistics: {
       totalPatients: user?.totalPatients || 0,
       monthlyPatients: Math.floor((user?.totalPatients || 0) * 0.6),
@@ -123,6 +129,9 @@ export default function DoctorProfilePage() {
       certifications: editedProfile.certifications,
       availableHours: editedProfile.availableHours,
       consultationFee: Number(editedProfile.consultationFee),
+      followUpFee: Number(editedProfile.followUpFee),
+      urgentFee: Number(editedProfile.urgentFee),
+      onlineFee: Number(editedProfile.onlineFee),
     });
     setIsEditing(false);
   };
@@ -814,8 +823,18 @@ export default function DoctorProfilePage() {
                         <Input
                           id="followUpFee"
                           type="number"
-                          value="100"
+                          value={
+                            isEditing
+                              ? editedProfile.followUpFee
+                              : doctorData.followUpFee
+                          }
                           disabled={!isEditing}
+                          onChange={(e) =>
+                            setEditedProfile({
+                              ...editedProfile,
+                              followUpFee: e.target.value,
+                            })
+                          }
                         />
                         <span className="text-sm text-gray-500">PLN</span>
                       </div>
@@ -826,8 +845,18 @@ export default function DoctorProfilePage() {
                         <Input
                           id="urgentFee"
                           type="number"
-                          value="250"
+                          value={
+                            isEditing
+                              ? editedProfile.urgentFee
+                              : doctorData.urgentFee
+                          }
                           disabled={!isEditing}
+                          onChange={(e) =>
+                            setEditedProfile({
+                              ...editedProfile,
+                              urgentFee: e.target.value,
+                            })
+                          }
                         />
                         <span className="text-sm text-gray-500">PLN</span>
                       </div>
@@ -838,8 +867,18 @@ export default function DoctorProfilePage() {
                         <Input
                           id="onlineFee"
                           type="number"
-                          value="120"
+                          value={
+                            isEditing
+                              ? editedProfile.onlineFee
+                              : doctorData.onlineFee
+                          }
                           disabled={!isEditing}
+                          onChange={(e) =>
+                            setEditedProfile({
+                              ...editedProfile,
+                              onlineFee: e.target.value,
+                            })
+                          }
                         />
                         <span className="text-sm text-gray-500">PLN</span>
                       </div>

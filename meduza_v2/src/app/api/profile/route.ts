@@ -114,6 +114,9 @@ export async function PATCH(req: NextRequest) {
       certifications: true,
       availableHours: true,
       consultationFee: true,
+      followUpFee: true,
+      urgentFee: true,
+      onlineFee: true,
     };
 
     const updates: any = {};
@@ -173,6 +176,9 @@ export async function PATCH(req: NextRequest) {
       certifications: user.certifications || [],
       availableHours: user.availableHours,
       consultationFee: user.consultationFee,
+      followUpFee: user.followUpFee,
+      urgentFee: user.urgentFee,
+      onlineFee: user.onlineFee,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

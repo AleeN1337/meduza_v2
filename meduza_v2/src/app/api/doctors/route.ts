@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get doctors with basic info
     const doctors = await User.find(query)
       .select(
-        "firstName lastName specialization licenseNumber experience workplace address bio languages availableHours consultationFee avatar"
+        "firstName lastName specialization licenseNumber experience workplace address bio languages availableHours consultationFee followUpFee urgentFee onlineFee avatar"
       )
       .sort({ experience: -1, firstName: 1 })
       .limit(limit);
@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
         languages: doctor.languages,
         availableHours: doctor.availableHours || defaultAvailableHours,
         consultationFee: doctor.consultationFee || 150, // Default fee if not set
+        followUpFee: doctor.followUpFee || doctor.consultationFee || 150,
+        urgentFee: doctor.urgentFee || 250,
+        onlineFee: doctor.onlineFee || doctor.consultationFee || 150,
         avatar: doctor.avatar,
         // Mock data for now - in future calculate from real reviews
         rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5.0

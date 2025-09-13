@@ -47,6 +47,9 @@ export interface IUser extends Document {
     };
   };
   consultationFee?: number;
+  followUpFee?: number;
+  urgentFee?: number;
+  onlineFee?: number;
 
   // Doctor statistics (auto-calculated)
   totalPatients?: number;
@@ -181,6 +184,9 @@ const UserSchema = new Schema<IUser>(
       },
     },
     consultationFee: Number,
+    followUpFee: Number,
+    urgentFee: Number,
+    onlineFee: Number,
 
     // Doctor statistics (auto-calculated)
     totalPatients: {
@@ -270,6 +276,7 @@ export interface IAppointment extends Document {
   duration: number;
   status: "scheduled" | "completed" | "cancelled" | "no-show" | "rescheduled";
   type: "consultation" | "follow-up" | "emergency" | "routine" | "check-up";
+  fee?: number; // Cost of the appointment
   notes?: string;
   symptoms?: string;
   diagnosis?: string;
@@ -312,6 +319,7 @@ const AppointmentSchema = new Schema<IAppointment>(
       enum: ["consultation", "follow-up", "emergency", "routine", "check-up"],
       required: true,
     },
+    fee: Number,
     notes: String,
     symptoms: String,
     diagnosis: String,

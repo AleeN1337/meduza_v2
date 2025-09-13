@@ -53,6 +53,9 @@ interface Doctor {
     };
   };
   consultationFee: number;
+  followUpFee?: number;
+  urgentFee?: number;
+  onlineFee?: number;
   avatar: string;
   rating: number;
   reviewCount: number;
@@ -128,6 +131,21 @@ export default function BookAppointmentPage() {
     { value: "check-up", label: "Badanie kontrolne" },
     { value: "emergency", label: "Pilna wizyta" },
   ];
+
+  const getFeeForAppointmentType = (doctor: Doctor, type: string) => {
+    switch (type) {
+      case "consultation":
+        return doctor.consultationFee || 150;
+      case "follow-up":
+        return doctor.followUpFee || doctor.consultationFee || 150;
+      case "check-up":
+        return doctor.followUpFee || doctor.consultationFee || 150;
+      case "emergency":
+        return doctor.urgentFee || 250;
+      default:
+        return doctor.consultationFee || 150;
+    }
+  };
 
   const displayDoctors = doctors.length > 0 ? doctors : fallbackDoctors;
 
@@ -444,8 +462,11 @@ export default function BookAppointmentPage() {
                         <div className="pt-2 border-t">
                           <p className="text-lg font-semibold text-green-600">
                             Koszt:{" "}
-                            {selectedDoctorData?.consultationFee
-                              ? `${selectedDoctorData.consultationFee} zł`
+                            {selectedDoctorData
+                              ? `${getFeeForAppointmentType(
+                                  selectedDoctorData,
+                                  appointmentType
+                                )} zł`
                               : "Cena do ustalenia"}
                           </p>
                         </div>
