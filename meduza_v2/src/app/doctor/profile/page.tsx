@@ -58,10 +58,18 @@ export default function DoctorProfilePage() {
     bio: user?.bio || "",
     languages: user?.languages || [],
     education: user?.education || [],
-    experience: user?.experience || [],
+    experience: user?.experience?.toString() || "",
     certifications: user?.certifications || [],
-    availableHours: user?.availableHours || {},
-    consultationFee: user?.consultationFee || 0,
+    availableHours: user?.availableHours || {
+      monday: { start: "09:00", end: "17:00", available: false },
+      tuesday: { start: "09:00", end: "17:00", available: false },
+      wednesday: { start: "09:00", end: "17:00", available: false },
+      thursday: { start: "09:00", end: "17:00", available: false },
+      friday: { start: "09:00", end: "17:00", available: false },
+      saturday: { start: "09:00", end: "17:00", available: false },
+      sunday: { start: "09:00", end: "17:00", available: false },
+    },
+    consultationFee: user?.consultationFee?.toString() || "0",
   });
 
   // Use real user data instead of mock data
@@ -73,16 +81,16 @@ export default function DoctorProfilePage() {
     bio: user?.bio || "",
     languages: user?.languages || [],
     education: user?.education || [],
-    experience: user?.experience || [],
+    experience: user?.experience || 0,
     certifications: user?.certifications || [],
     availableHours: user?.availableHours || {
-      monday: { start: "", end: "", available: false },
-      tuesday: { start: "", end: "", available: false },
-      wednesday: { start: "", end: "", available: false },
-      thursday: { start: "", end: "", available: false },
-      friday: { start: "", end: "", available: false },
-      saturday: { start: "", end: "", available: false },
-      sunday: { start: "", end: "", available: false },
+      monday: { start: "09:00", end: "17:00", available: false },
+      tuesday: { start: "09:00", end: "17:00", available: false },
+      wednesday: { start: "09:00", end: "17:00", available: false },
+      thursday: { start: "09:00", end: "17:00", available: false },
+      friday: { start: "09:00", end: "17:00", available: false },
+      saturday: { start: "09:00", end: "17:00", available: false },
+      sunday: { start: "09:00", end: "17:00", available: false },
     },
     consultationFee: user?.consultationFee || 0,
     statistics: {
@@ -109,9 +117,12 @@ export default function DoctorProfilePage() {
       bio: editedProfile.bio,
       languages: editedProfile.languages,
       education: editedProfile.education,
+      experience: editedProfile.experience
+        ? Number(editedProfile.experience)
+        : undefined,
       certifications: editedProfile.certifications,
       availableHours: editedProfile.availableHours,
-      consultationFee: editedProfile.consultationFee,
+      consultationFee: Number(editedProfile.consultationFee),
     });
     setIsEditing(false);
   };
@@ -486,7 +497,7 @@ export default function DoctorProfilePage() {
                           key={index}
                           className="flex items-start justify-between p-4 bg-gray-50 rounded-lg"
                         >
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-semibold">{edu.degree}</h4>
                             <p className="text-sm text-gray-600">
                               {edu.institution}
@@ -538,11 +549,30 @@ export default function DoctorProfilePage() {
                     {typeof doctorData.experience === "number" &&
                     doctorData.experience > 0 ? (
                       <div className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="h-5 w-5 text-gray-500" />
-                          <span className="font-semibold">
-                            {doctorData.experience} lat doświadczenia
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="h-5 w-5 text-gray-500" />
+                            <span className="font-semibold">
+                              {doctorData.experience} lat doświadczenia
+                            </span>
+                          </div>
+                          {isEditing && (
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="number"
+                                value={editedProfile.experience}
+                                onChange={(e) =>
+                                  setEditedProfile({
+                                    ...editedProfile,
+                                    experience: e.target.value,
+                                  })
+                                }
+                                className="w-20"
+                                placeholder="lata"
+                              />
+                              <span className="text-sm">lat</span>
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 mt-2">
                           Doświadczenie w praktyce medycznej
@@ -557,6 +587,23 @@ export default function DoctorProfilePage() {
                         <p className="text-sm text-gray-400">
                           Dodaj informacje o swoim doświadczeniu zawodowym
                         </p>
+                        {isEditing && (
+                          <div className="mt-4 flex items-center justify-center space-x-2">
+                            <Input
+                              type="number"
+                              value={editedProfile.experience}
+                              onChange={(e) =>
+                                setEditedProfile({
+                                  ...editedProfile,
+                                  experience: e.target.value,
+                                })
+                              }
+                              className="w-20"
+                              placeholder="lata"
+                            />
+                            <span className="text-sm">lat doświadczenia</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -648,26 +695,68 @@ export default function DoctorProfilePage() {
                           <div className="flex items-center space-x-2">
                             <input
                               type="checkbox"
-                              checked={schedule.available}
+                              checked={
+                                editedProfile.availableHours[day]?.available ||
+                                false
+                              }
                               disabled={!isEditing}
+                              onChange={(e) => {
+                                const newAvailableHours = {
+                                  ...editedProfile.availableHours,
+                                  [day]: {
+                                    ...editedProfile.availableHours[day],
+                                    available: e.target.checked,
+                                  },
+                                };
+                                setEditedProfile({
+                                  ...editedProfile,
+                                  availableHours: newAvailableHours,
+                                });
+                              }}
                               className="h-4 w-4"
                             />
                             <span className="text-sm">Dostępny</span>
                           </div>
                         </div>
-                        {schedule.available && (
+                        {editedProfile.availableHours[day]?.available && (
                           <div className="flex items-center space-x-2">
                             <Input
                               type="time"
-                              value={schedule.start}
+                              value={schedule.start || "09:00"}
                               disabled={!isEditing}
+                              onChange={(e) => {
+                                const newAvailableHours = {
+                                  ...editedProfile.availableHours,
+                                  [day]: {
+                                    ...editedProfile.availableHours[day],
+                                    start: e.target.value,
+                                  },
+                                };
+                                setEditedProfile({
+                                  ...editedProfile,
+                                  availableHours: newAvailableHours,
+                                });
+                              }}
                               className="w-24"
                             />
                             <span>-</span>
                             <Input
                               type="time"
-                              value={schedule.end}
+                              value={schedule.end || "17:00"}
                               disabled={!isEditing}
+                              onChange={(e) => {
+                                const newAvailableHours = {
+                                  ...editedProfile.availableHours,
+                                  [day]: {
+                                    ...editedProfile.availableHours[day],
+                                    end: e.target.value,
+                                  },
+                                };
+                                setEditedProfile({
+                                  ...editedProfile,
+                                  availableHours: newAvailableHours,
+                                });
+                              }}
                               className="w-24"
                             />
                           </div>
@@ -703,8 +792,18 @@ export default function DoctorProfilePage() {
                         <Input
                           id="consultationFee"
                           type="number"
-                          value={doctorData.consultationFee}
+                          value={
+                            isEditing
+                              ? editedProfile.consultationFee
+                              : doctorData.consultationFee
+                          }
                           disabled={!isEditing}
+                          onChange={(e) =>
+                            setEditedProfile({
+                              ...editedProfile,
+                              consultationFee: e.target.value,
+                            })
+                          }
                         />
                         <span className="text-sm text-gray-500">PLN</span>
                       </div>

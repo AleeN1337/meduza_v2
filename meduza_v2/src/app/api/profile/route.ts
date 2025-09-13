@@ -51,6 +51,18 @@ export async function GET(req: NextRequest) {
       medications: user.medications || [],
       conditions: user.conditions || [],
       emergencyContact: user.emergencyContact,
+      // Doctor specific fields
+      specialization: user.specialization,
+      licenseNumber: user.licenseNumber,
+      workplace: user.workplace,
+      address: user.address,
+      bio: user.bio,
+      languages: user.languages || [],
+      education: user.education || [],
+      experience: user.experience,
+      certifications: user.certifications || [],
+      availableHours: user.availableHours,
+      consultationFee: user.consultationFee,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -90,6 +102,18 @@ export async function PATCH(req: NextRequest) {
       conditions: true,
       emergencyContact: true,
       avatar: true,
+      // Doctor specific fields
+      specialization: true,
+      licenseNumber: true,
+      workplace: true,
+      address: true,
+      bio: true,
+      languages: true,
+      education: true,
+      experience: true,
+      certifications: true,
+      availableHours: true,
+      consultationFee: true,
     };
 
     const updates: any = {};
@@ -137,6 +161,18 @@ export async function PATCH(req: NextRequest) {
       medications: user.medications || [],
       conditions: user.conditions || [],
       emergencyContact: user.emergencyContact,
+      // Doctor specific fields
+      specialization: user.specialization,
+      licenseNumber: user.licenseNumber,
+      workplace: user.workplace,
+      address: user.address,
+      bio: user.bio,
+      languages: user.languages || [],
+      education: user.education || [],
+      experience: user.experience,
+      certifications: user.certifications || [],
+      availableHours: user.availableHours,
+      consultationFee: user.consultationFee,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
