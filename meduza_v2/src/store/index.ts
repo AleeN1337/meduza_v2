@@ -296,3 +296,165 @@ export const useAppointmentStore = create<AppointmentState>()(
     },
   }))
 );
+
+// Notification types
+export interface NotificationData {
+  id: string;
+  title: string;
+  message: string;
+  type: "appointment" | "prescription" | "lab-result" | "message" | "system";
+  priority: "low" | "medium" | "high" | "urgent";
+  read: boolean;
+  actionUrl?: string;
+  data?: Record<string, any>;
+  createdAt: string;
+}
+
+// Notifications store
+interface NotificationState {
+  notifications: NotificationData[];
+  unreadCount: number;
+  isLoading: boolean;
+  fetchNotifications: () => Promise<void>;
+  markAsRead: (notificationIds: string[]) => Promise<void>;
+  markAsUnread: (notificationIds: string[]) => Promise<void>;
+  deleteNotifications: (notificationIds: string[]) => Promise<void>;
+}
+
+export const useNotificationStore = create<NotificationState>()(
+  devtools((set, get) => ({
+    notifications: [],
+    unreadCount: 0,
+    isLoading: false,
+
+    fetchNotifications: async () => {
+      set({ isLoading: true });
+      try {
+        const { token } = useAuthStore.getState();
+        const response = await fetch("/api/notifications", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch notifications");
+        }
+
+        const data = await response.json();
+        set({
+          notifications: data.notifications,
+          unreadCount: data.unreadCount,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    },
+
+    markAsRead: async (notificationIds: string[]) => {
+      try {
+        const { token } = useAuthStore.getState();
+        const response = await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            notificationIds,
+            action: "markAsRead",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to mark notifications as read");
+        }
+
+        // Update local state
+        set((state) => ({
+          notifications: state.notifications.map((notification) =>
+            notificationIds.includes(notification.id)
+              ? { ...notification, read: true }
+              : notification
+          ),
+          unreadCount: Math.max(0, state.unreadCount - notificationIds.length),
+        }));
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    markAsUnread: async (notificationIds: string[]) => {
+      try {
+        const { token } = useAuthStore.getState();
+        const response = await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            notificationIds,
+            action: "markAsUnread",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to mark notifications as unread");
+        }
+
+        // Update local state
+        set((state) => ({
+          notifications: state.notifications.map((notification) =>
+            notificationIds.includes(notification.id)
+              ? { ...notification, read: false }
+              : notification
+          ),
+          unreadCount: state.unreadCount + notificationIds.length,
+        }));
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    deleteNotifications: async (notificationIds: string[]) => {
+      try {
+        const { token } = useAuthStore.getState();
+        const response = await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            notificationIds,
+            action: "delete",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete notifications");
+        }
+
+        // Update local state
+        set((state) => ({
+          notifications: state.notifications.filter(
+            (notification) => !notificationIds.includes(notification.id)
+          ),
+          unreadCount: Math.max(
+            0,
+            state.unreadCount -
+              notificationIds.filter(
+                (id) =>
+                  state.notifications.find((n) => n.id === id)?.read === false
+              ).length
+          ),
+        }));
+      } catch (error) {
+        throw error;
+      }
+    },
+  }))
+);

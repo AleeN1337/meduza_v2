@@ -40,9 +40,11 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") || "scheduled";
+    const status = searchParams.get("status") || "all";
     const limit = parseInt(searchParams.get("limit") || "20");
     const date = searchParams.get("date");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     // Build query
     const query: any = {
@@ -58,6 +60,11 @@ export async function GET(request: NextRequest) {
       const endDate = new Date(date);
       endDate.setDate(endDate.getDate() + 1);
       query.date = { $gte: startDate, $lt: endDate };
+    } else if (startDate && endDate) {
+      query.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
     // Get appointments with patient details
@@ -69,18 +76,14 @@ export async function GET(request: NextRequest) {
     // Format appointments for frontend
     const formattedAppointments = appointments.map((appointment) => ({
       id: appointment._id,
-      patient: {
-        id: appointment.patientId._id,
-        firstName: appointment.patientId.firstName,
-        lastName: appointment.patientId.lastName,
-        email: appointment.patientId.email,
-        phone: appointment.patientId.phone,
-        dateOfBirth: appointment.patientId.dateOfBirth,
-      },
+      patientId: appointment.patientId._id,
+      doctorId: appointment.doctorId,
+      patientName: `${appointment.patientId.firstName} ${appointment.patientId.lastName}`,
+      doctorName: "", // Will be filled by frontend if needed
       date: appointment.date.toISOString().split("T")[0],
       time: appointment.time,
-      type: appointment.type,
       status: appointment.status,
+      type: appointment.type,
       notes: appointment.notes,
       symptoms: appointment.symptoms,
       duration: appointment.duration,

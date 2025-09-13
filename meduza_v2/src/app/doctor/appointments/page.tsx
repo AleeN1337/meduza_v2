@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,135 +35,118 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Filter,
 } from "lucide-react";
+import { useAuthStore } from "@/store";
 
 export default function DoctorAppointmentsPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  // Mock data - wizyty lekarza
-  const appointments = [
-    {
-      id: 1,
-      patientName: "Jan Kowalski",
-      patientId: "patient_1",
-      date: "2025-07-12",
-      time: "09:00",
-      duration: 30,
-      type: "consultation",
-      status: "scheduled",
-      notes: "Kontrola ciśnienia tętniczego",
-      location: "Gabinet 101",
-      isOnline: false,
-      patientPhone: "+48 123 456 789",
-      urgency: "normal",
-    },
-    {
-      id: 2,
-      patientName: "Anna Nowak",
-      patientId: "patient_2",
-      date: "2025-07-12",
-      time: "09:30",
-      duration: 15,
-      type: "follow-up",
-      status: "completed",
-      notes: "Omówienie wyników badań",
-      location: "Gabinet 101",
-      isOnline: false,
-      patientPhone: "+48 987 654 321",
-      urgency: "normal",
-    },
-    {
-      id: 3,
-      patientName: "Piotr Wiśniewski",
-      patientId: "patient_3",
-      date: "2025-07-12",
-      time: "10:00",
-      duration: 45,
-      type: "consultation",
-      status: "in-progress",
-      notes: "Bóle w klatce piersiowej - pilna konsultacja",
-      location: "Gabinet 101",
-      isOnline: false,
-      patientPhone: "+48 555 666 777",
-      urgency: "high",
-    },
-    {
-      id: 4,
-      patientName: "Maria Zielińska",
-      patientId: "patient_4",
-      date: "2025-07-12",
-      time: "11:00",
-      duration: 30,
-      type: "consultation",
-      status: "scheduled",
-      notes: "Pierwsza wizyta - konsultacja kardiologiczna",
-      location: "Online",
-      isOnline: true,
-      patientPhone: "+48 111 222 333",
-      urgency: "normal",
-    },
-    {
-      id: 5,
-      patientName: "Tomasz Kowalczyk",
-      patientId: "patient_5",
-      date: "2025-07-12",
-      time: "14:00",
-      duration: 30,
-      type: "follow-up",
-      status: "scheduled",
-      notes: "Kontrola po zabiegu",
-      location: "Gabinet 101",
-      isOnline: false,
-      patientPhone: "+48 444 555 666",
-      urgency: "normal",
-    },
-    {
-      id: 6,
-      patientName: "Katarzyna Nowak",
-      patientId: "patient_6",
-      date: "2025-07-12",
-      time: "15:30",
-      duration: 30,
-      type: "consultation",
-      status: "cancelled",
-      notes: "Konsultacja odwołana przez pacjenta",
-      location: "Gabinet 101",
-      isOnline: false,
-      patientPhone: "+48 777 888 999",
-      urgency: "normal",
-    },
-  ];
+  // Fetch appointments on component mount and when filters change
+  useEffect(() => {
+    if (user && user.role === "doctor") {
+      fetchAppointments();
+    }
+  }, [user, viewMode, selectedDate, filterStatus]);
 
-  // Filter appointments for selected date
-  const selectedDateString = selectedDate.toISOString().split("T")[0];
-  const todayAppointments = appointments.filter(
-    (apt) => apt.date === selectedDateString
-  );
+  const fetchAppointments = async () => {
+    try {
+      setIsLoading(true);
+      let url = "/api/appointments/doctor?";
 
-  const timeSlots = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-  ];
+      // Add date filter based on view mode
+      if (viewMode === "day") {
+        const dateStr = selectedDate.toISOString().split("T")[0];
+        url += `date=${dateStr}&`;
+      } else if (viewMode === "week") {
+        const startOfWeek = new Date(selectedDate);
+        startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+        url += `startDate=${startOfWeek.toISOString().split("T")[0]}&endDate=${
+          endOfWeek.toISOString().split("T")[0]
+        }&`;
+      } else if (viewMode === "month") {
+        const startOfMonth = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          1
+        );
+        const endOfMonth = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth() + 1,
+          0
+        );
+
+        url += `startDate=${startOfMonth.toISOString().split("T")[0]}&endDate=${
+          endOfMonth.toISOString().split("T")[0]
+        }&`;
+      }
+
+      // Add status filter
+      if (filterStatus !== "all") {
+        url += `status=${filterStatus}&`;
+      }
+
+      url += "limit=100";
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data.appointments || []);
+        setFilteredAppointments(data.appointments || []);
+      }
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter appointments based on current view
+  const getFilteredAppointments = () => {
+    if (viewMode === "day") {
+      const selectedDateString = selectedDate.toISOString().split("T")[0];
+      return appointments.filter((apt) => apt.date === selectedDateString);
+    }
+    return appointments;
+  };
+
+  const todayAppointments = getFilteredAppointments();
+
+  const getViewTitle = () => {
+    if (viewMode === "day") {
+      return `Wizyty na ${selectedDate.toLocaleDateString("pl-PL")}`;
+    } else if (viewMode === "week") {
+      const startOfWeek = new Date(selectedDate);
+      startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+      return `Wizyty w tygodniu ${startOfWeek.toLocaleDateString(
+        "pl-PL"
+      )} - ${endOfWeek.toLocaleDateString("pl-PL")}`;
+    } else if (viewMode === "month") {
+      return `Wizyty w ${selectedDate.toLocaleDateString("pl-PL", {
+        month: "long",
+        year: "numeric",
+      })}`;
+    }
+    return "Wizyty";
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -188,25 +171,6 @@ export default function DoctorAppointmentsPage() {
         return "bg-red-50 border-red-200";
       default:
         return "bg-gray-50 border-gray-200";
-    }
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return (
-          <Badge variant="destructive" className="text-xs">
-            Pilne
-          </Badge>
-        );
-      case "medium":
-        return (
-          <Badge variant="secondary" className="text-xs">
-            Średnie
-          </Badge>
-        );
-      default:
-        return null;
     }
   };
 
@@ -265,6 +229,34 @@ export default function DoctorAppointmentsPage() {
                   Miesiąc
                 </Button>
               </div>
+
+              <div className="flex border rounded-lg">
+                <Button
+                  variant={filterStatus === "all" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setFilterStatus("all")}
+                  className="rounded-r-none"
+                >
+                  Wszystkie
+                </Button>
+                <Button
+                  variant={filterStatus === "scheduled" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setFilterStatus("scheduled")}
+                  className="rounded-none border-x-0"
+                >
+                  Zaplanowane
+                </Button>
+                <Button
+                  variant={filterStatus === "completed" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setFilterStatus("completed")}
+                  className="rounded-l-none"
+                >
+                  Zakończone
+                </Button>
+              </div>
+
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Nowa wizyta
@@ -341,7 +333,7 @@ export default function DoctorAppointmentsPage() {
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 mr-2" />
-                    Wizyty na {selectedDate.toLocaleDateString("pl-PL")}
+                    {getViewTitle()}
                   </div>
                   <Button variant="outline" size="sm">
                     <Edit3 className="h-4 w-4 mr-2" />
@@ -376,7 +368,6 @@ export default function DoctorAppointmentsPage() {
                                   <h3 className="font-semibold text-lg">
                                     {appointment.patientName}
                                   </h3>
-                                  {getUrgencyBadge(appointment.urgency)}
                                   <Badge
                                     variant={
                                       appointment.type === "consultation"
@@ -386,26 +377,22 @@ export default function DoctorAppointmentsPage() {
                                   >
                                     {appointment.type === "consultation"
                                       ? "Konsultacja"
-                                      : "Kontrola"}
+                                      : appointment.type === "follow-up"
+                                      ? "Kontrola"
+                                      : appointment.type}
                                   </Badge>
                                 </div>
 
                                 <p className="text-sm text-gray-600 mb-2">
-                                  {appointment.notes}
+                                  {appointment.notes || "Brak notatek"}
                                 </p>
 
                                 <div className="flex items-center space-x-4 text-xs text-gray-500">
                                   <div className="flex items-center space-x-1">
-                                    {appointment.isOnline ? (
-                                      <Video className="h-3 w-3" />
-                                    ) : (
-                                      <MapPin className="h-3 w-3" />
-                                    )}
-                                    <span>{appointment.location}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-1">
-                                    <Phone className="h-3 w-3" />
-                                    <span>{appointment.patientPhone}</span>
+                                    <Clock className="h-3 w-3" />
+                                    <span>
+                                      Czas trwania: {appointment.duration}min
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -457,11 +444,17 @@ export default function DoctorAppointmentsPage() {
                                           </p>
                                         </div>
                                         <div>
-                                          <p className="font-medium">
-                                            Lokalizacja
-                                          </p>
+                                          <p className="font-medium">Status</p>
                                           <p className="text-sm text-gray-600">
-                                            {appointment.location}
+                                            {appointment.status === "scheduled"
+                                              ? "Zaplanowana"
+                                              : appointment.status ===
+                                                "in-progress"
+                                              ? "W trakcie"
+                                              : appointment.status ===
+                                                "completed"
+                                              ? "Zakończona"
+                                              : appointment.status}
                                           </p>
                                         </div>
                                       </div>
