@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "20");
     const unreadOnly = searchParams.get("unreadOnly") === "true";
+    const since = searchParams.get("since");
 
     // Build query
     const query: any = {
@@ -50,6 +51,10 @@ export async function GET(request: NextRequest) {
 
     if (unreadOnly) {
       query.read = false;
+    }
+
+    if (since) {
+      query.createdAt = { $gt: new Date(since) };
     }
 
     // Get notifications
@@ -74,7 +79,7 @@ export async function GET(request: NextRequest) {
         read: notification.read,
         actionUrl: notification.actionUrl,
         data: notification.data,
-        createdAt: notification.createdAt,
+        createdAt: notification.createdAt.toISOString(),
       })),
       unreadCount,
     });

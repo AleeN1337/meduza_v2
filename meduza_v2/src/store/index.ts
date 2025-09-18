@@ -315,7 +315,9 @@ interface NotificationState {
   notifications: NotificationData[];
   unreadCount: number;
   isLoading: boolean;
+  lastFetchTime: string | null;
   fetchNotifications: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
   markAsRead: (notificationIds: string[]) => Promise<void>;
   markAsUnread: (notificationIds: string[]) => Promise<void>;
   deleteNotifications: (notificationIds: string[]) => Promise<void>;
@@ -326,8 +328,56 @@ export const useNotificationStore = create<NotificationState>()(
     notifications: [],
     unreadCount: 0,
     isLoading: false,
+    lastFetchTime: null,
 
     fetchNotifications: async () => {
+      set({ isLoading: true });
+      try {
+        const { token } = useAuthStore.getState();
+        const { lastFetchTime } = get();
+
+        let url = "/api/notifications";
+        if (lastFetchTime) {
+          url += `?since=${encodeURIComponent(lastFetchTime)}`;
+        }
+
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch notifications");
+        }
+
+        const data = await response.json();
+        const currentTime = new Date().toISOString();
+
+        // If this is an incremental fetch, merge with existing notifications
+        if (lastFetchTime) {
+          set((state) => ({
+            notifications: [...data.notifications, ...state.notifications],
+            unreadCount: data.unreadCount,
+            isLoading: false,
+            lastFetchTime: currentTime,
+          }));
+        } else {
+          // First fetch or full refresh
+          set({
+            notifications: data.notifications,
+            unreadCount: data.unreadCount,
+            isLoading: false,
+            lastFetchTime: currentTime,
+          });
+        }
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    },
+
+    refreshNotifications: async () => {
       set({ isLoading: true });
       try {
         const { token } = useAuthStore.getState();
@@ -342,10 +392,13 @@ export const useNotificationStore = create<NotificationState>()(
         }
 
         const data = await response.json();
+        const currentTime = new Date().toISOString();
+
         set({
           notifications: data.notifications,
           unreadCount: data.unreadCount,
           isLoading: false,
+          lastFetchTime: currentTime,
         });
       } catch (error) {
         set({ isLoading: false });

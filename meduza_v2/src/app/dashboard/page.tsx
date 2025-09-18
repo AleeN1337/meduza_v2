@@ -16,6 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Calendar,
   Clock,
   MessageSquare,
@@ -30,6 +38,7 @@ import {
   TestTube,
   Loader2,
   X,
+  Check,
 } from "lucide-react";
 
 interface DashboardAppointment {
@@ -53,6 +62,9 @@ export default function DashboardPage() {
     notifications: storeNotifications,
     unreadCount,
     fetchNotifications,
+    refreshNotifications,
+    markAsRead,
+    deleteNotifications,
   } = useNotificationStore();
   const router = useRouter();
   const [upcomingAppointments, setUpcomingAppointments] = useState<
@@ -82,6 +94,17 @@ export default function DashboardPage() {
     if (isAuthenticated && user) {
       fetchNotifications();
     }
+  }, [isAuthenticated, user, fetchNotifications]);
+
+  // Auto-refresh notifications every 30 seconds
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, [isAuthenticated, user, fetchNotifications]);
 
   // Fetch upcoming appointments
@@ -144,6 +167,48 @@ export default function DashboardPage() {
   const handleLogout = () => {
     logout();
     router.push("/");
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markAsRead([notificationId]);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    try {
+      await deleteNotifications([notificationId]);
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const unreadNotificationIds = storeNotifications
+      .filter(notification => !notification.read)
+      .map(notification => notification.id);
+    
+    if (unreadNotificationIds.length > 0) {
+      try {
+        await markAsRead(unreadNotificationIds);
+      } catch (error) {
+        console.error("Error marking all notifications as read:", error);
+      }
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    const notificationIds = storeNotifications.map(notification => notification.id);
+    
+    if (notificationIds.length > 0) {
+      try {
+        await deleteNotifications(notificationIds);
+      } catch (error) {
+        console.error("Error deleting all notifications:", error);
+      }
+    }
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -270,18 +335,118 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Bell className="h-4 w-4 mr-2" />
-                Powiadomienia
-                {storeNotifications.length > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
-                  >
-                    {storeNotifications.length}
-                  </Badge>
-                )}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Powiadomienia
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
+                      >
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel className="flex items-center justify-between">
+                    <span>Powiadomienia</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshNotifications}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Bell className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {storeNotifications.length > 0 ? (
+                    <>
+                      <div className="max-h-64 overflow-y-auto">
+                        {storeNotifications.slice(0, 5).map((notification) => (
+                          <div key={notification.id} className="p-3 border-b last:border-b-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h5 className={`font-medium text-sm truncate ${
+                                  !notification.read ? 'text-gray-900' : 'text-gray-600'
+                                }`}>
+                                  {notification.title}
+                                </h5>
+                                <p className={`text-xs mt-1 line-clamp-2 ${
+                                  !notification.read ? 'text-gray-700' : 'text-gray-500'
+                                }`}>
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(notification.createdAt).toLocaleString('pl-PL')}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-1 ml-2">
+                                {!notification.read && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleMarkAsRead(notification.id)}
+                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteNotification(notification.id)}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <div className="p-2 space-y-1">
+                        {unreadCount > 0 && (
+                          <DropdownMenuItem onClick={handleMarkAllAsRead}>
+                            <Check className="h-4 w-4 mr-2" />
+                            Oznacz wszystkie jako przeczytane
+                          </DropdownMenuItem>
+                        )}
+                        {storeNotifications.length > 0 && (
+                          <DropdownMenuItem 
+                            onClick={handleDeleteAllNotifications}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Usuń wszystkie
+                          </DropdownMenuItem>
+                        )}
+                      </div>
+                      
+                      {storeNotifications.length > 5 && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="justify-center text-blue-600">
+                            Zobacz wszystkie powiadomienia
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-4 text-center">
+                      <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Brak powiadomień</p>
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <div className="flex items-center space-x-2">
                 <Avatar>
@@ -597,9 +762,20 @@ export default function DashboardPage() {
             {/* Notifications */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bell className="h-5 w-5 mr-2 text-blue-600" />
-                  Powiadomienia
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Bell className="h-5 w-5 mr-2 text-blue-600" />
+                    Powiadomienia
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshNotifications}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Odśwież
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -609,21 +785,79 @@ export default function DashboardPage() {
                       {storeNotifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500"
+                          className={`p-3 rounded-lg border-l-4 ${
+                            !notification.read 
+                              ? "bg-blue-50 border-blue-500" 
+                              : "bg-gray-50 border-gray-300"
+                          }`}
                         >
-                          <h5 className="font-medium text-sm">
-                            {notification.title}
-                          </h5>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {notification.createdAt}
-                          </p>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h5 className={`font-medium text-sm ${
+                                !notification.read ? 'text-gray-900' : 'text-gray-600'
+                              }`}>
+                                {notification.title}
+                              </h5>
+                              <p className={`text-xs mt-1 ${
+                                !notification.read ? 'text-gray-700' : 'text-gray-500'
+                              }`}>
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(notification.createdAt).toLocaleString('pl-PL')}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1 ml-2">
+                              {!notification.read && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMarkAsRead(notification.id)}
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                  title="Oznacz jako przeczytane"
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteNotification(notification.id)}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                title="Usuń powiadomienie"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <Button variant="ghost" size="sm" className="w-full mt-4">
+                    <div className="flex space-x-2 mt-4">
+                      {unreadCount > 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleMarkAllAsRead}
+                          className="flex-1"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Oznacz wszystkie jako przeczytane
+                        </Button>
+                      )}
+                      {storeNotifications.length > 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleDeleteAllNotifications}
+                          className="flex-1 text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Usuń wszystkie
+                        </Button>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm" className="w-full mt-2">
                       Zobacz wszystkie
                     </Button>
                   </>
