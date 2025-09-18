@@ -19,7 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
@@ -36,8 +39,10 @@ import {
   CheckCircle,
   XCircle,
   Filter,
+  X,
 } from "lucide-react";
 import { useAuthStore } from "@/store";
+import { toast } from "sonner";
 
 export default function DoctorAppointmentsPage() {
   const router = useRouter();
@@ -48,6 +53,12 @@ export default function DoctorAppointmentsPage() {
   const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Cancel appointment dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<any>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Fetch appointments on component mount and when filters change
   useEffect(() => {
@@ -114,6 +125,53 @@ export default function DoctorAppointmentsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!appointmentToCancel || !cancellationReason.trim()) {
+      toast.error("Wprowadź przyczynę anulowania");
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+
+      const response = await fetch("/api/appointments/cancel-doctor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({
+          appointmentId: appointmentToCancel.id,
+          cancellationReason: cancellationReason.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Wizyta została anulowana pomyślnie");
+        setCancelDialogOpen(false);
+        setAppointmentToCancel(null);
+        setCancellationReason("");
+        // Refresh appointments list
+        fetchAppointments();
+      } else {
+        toast.error(data.message || "Wystąpił błąd podczas anulowania wizyty");
+      }
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+      toast.error("Wystąpił błąd podczas anulowania wizyty");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const openCancelDialog = (appointment: any) => {
+    setAppointmentToCancel(appointment);
+    setCancellationReason("");
+    setCancelDialogOpen(true);
   };
 
   // Filter appointments based on current view
@@ -492,9 +550,18 @@ export default function DoctorAppointmentsPage() {
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
 
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {appointment.status === "scheduled" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      openCancelDialog(appointment)
+                                    }
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -545,6 +612,73 @@ export default function DoctorAppointmentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Appointment Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Anulowanie wizyty</DialogTitle>
+            <DialogDescription>
+              Wprowadź przyczynę anulowania wizyty. Pacjent otrzyma
+              powiadomienie z tą informacją.
+            </DialogDescription>
+          </DialogHeader>
+
+          {appointmentToCancel && (
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium">Szczegóły wizyty:</p>
+                <p className="text-sm text-gray-600">
+                  Pacjent: {appointmentToCancel.patientName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Data: {appointmentToCancel.date} {appointmentToCancel.time}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Typ:{" "}
+                  {appointmentToCancel.type === "consultation"
+                    ? "Konsultacja"
+                    : "Kontrola"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancellation-reason">
+                  Przyczyna anulowania *
+                </Label>
+                <textarea
+                  id="cancellation-reason"
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="Wprowadź przyczynę anulowania wizyty..."
+                  className="w-full min-h-[80px] px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  maxLength={500}
+                />
+                <p className="text-xs text-gray-500">
+                  {cancellationReason.length}/500 znaków
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={isCancelling}
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={handleCancelAppointment}
+              disabled={!cancellationReason.trim() || isCancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isCancelling ? "Anulowanie..." : "Anuluj wizytę"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuthStore } from "@/store";
+import { useAuthStore, useNotificationStore } from "@/store";
 import { Appointment, LabResult, Prescription, Notification } from "@/types";
 import {
   Card,
@@ -49,6 +49,11 @@ interface DashboardAppointment {
 
 export default function DashboardPage() {
   const { user, isAuthenticated, token, logout } = useAuthStore();
+  const {
+    notifications: storeNotifications,
+    unreadCount,
+    fetchNotifications,
+  } = useNotificationStore();
   const router = useRouter();
   const [upcomingAppointments, setUpcomingAppointments] = useState<
     DashboardAppointment[]
@@ -71,6 +76,13 @@ export default function DashboardPage() {
       router.push("/doctor/dashboard");
     }
   }, [isAuthenticated, user, router]);
+
+  // Fetch notifications on component mount
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated, user, fetchNotifications]);
 
   // Fetch upcoming appointments
   useEffect(() => {
@@ -155,6 +167,9 @@ export default function DashboardPage() {
         setCancelledAppointments((prev) => new Set(prev).add(appointmentId));
         console.log("Added to cancelled set:", appointmentId);
 
+        // Refresh notifications
+        fetchNotifications();
+
         // Set timer to hide cancelled appointment after 5 seconds
         setTimeout(() => {
           console.log("Timer fired for appointment:", appointmentId);
@@ -206,7 +221,7 @@ export default function DashboardPage() {
   // Empty states for new patients - no mock data
   const recentResults = user.recentResults || [];
   const activePrescriptions = user.activePrescriptions || [];
-  const notifications = user.notifications || [];
+  const userNotifications = user.notifications || [];
 
   // Filter appointments based on show all state and cancelled status
   const visibleAppointments = upcomingAppointments
@@ -258,12 +273,12 @@ export default function DashboardPage() {
               <Button variant="outline" size="sm">
                 <Bell className="h-4 w-4 mr-2" />
                 Powiadomienia
-                {notifications.length > 0 && (
+                {storeNotifications.length > 0 && (
                   <Badge
                     variant="destructive"
                     className="ml-2 h-5 w-5 rounded-full p-0 text-xs"
                   >
-                    {notifications.length}
+                    {storeNotifications.length}
                   </Badge>
                 )}
               </Button>
@@ -588,10 +603,10 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {notifications.length > 0 ? (
+                {storeNotifications.length > 0 ? (
                   <>
                     <div className="space-y-3">
-                      {notifications.map((notification) => (
+                      {storeNotifications.map((notification) => (
                         <div
                           key={notification.id}
                           className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500"

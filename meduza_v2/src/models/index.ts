@@ -281,6 +281,9 @@ export interface IAppointment extends Document {
   symptoms?: string;
   diagnosis?: string;
   prescription?: string[];
+  cancellationReason?: string; // Reason for cancellation
+  cancelledBy?: mongoose.Types.ObjectId; // Who cancelled the appointment
+  cancelledAt?: Date; // When was it cancelled
   createdAt: Date;
   updatedAt: Date;
 }
@@ -324,6 +327,12 @@ const AppointmentSchema = new Schema<IAppointment>(
     symptoms: String,
     diagnosis: String,
     prescription: [String],
+    cancellationReason: String,
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancelledAt: Date,
   },
   {
     timestamps: true,
