@@ -320,11 +320,6 @@ export default function DoctorAppointmentsPage() {
                   Zakończone
                 </Button>
               </div>
-
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nowa wizyta
-              </Button>
             </div>
           </div>
         </div>
@@ -399,10 +394,6 @@ export default function DoctorAppointmentsPage() {
                     <Clock className="h-5 w-5 mr-2" />
                     {getViewTitle()}
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Zarządzaj harmonogramem
-                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
