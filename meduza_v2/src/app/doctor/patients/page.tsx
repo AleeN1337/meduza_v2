@@ -19,7 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -32,7 +31,6 @@ import {
   Mail,
   AlertTriangle,
   Eye,
-  MessageSquare,
   MoreVertical,
   Clock,
   Activity,
@@ -76,6 +74,7 @@ export default function DoctorPatientsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [openPatientId, setOpenPatientId] = useState<string | null>(null);
+  const [openPatientTab, setOpenPatientTab] = useState<"profile" | "visit" | "rx">("profile");
   const [recordForm, setRecordForm] = useState({
     title: "Wizyta",
     description: "",
@@ -372,6 +371,40 @@ export default function DoctorPatientsPage() {
     return age;
   };
 
+  const openPatientDialog = (
+    patient: Patient,
+    tab: "profile" | "visit" | "rx" = "profile",
+  ) => {
+    setOpenPatientId(patient.id);
+    setOpenPatientTab(tab);
+    setPatientUpdateForm({
+      allergies: patient.allergies?.join(", ") || "",
+      conditions: patient.conditions?.join(", ") || "",
+      medications: patient.medications?.join(", ") || "",
+      notes: patient.notes || "",
+    });
+    setRecordForm({
+      title: "Wizyta",
+      description: "",
+      diagnosis: "",
+      treatment: "",
+    });
+    setPrescriptionForm({
+      medicationName: "",
+      dosage: "",
+      frequency: "",
+      duration: "",
+      instructions: "",
+    });
+    setLabForm({
+      testName: "",
+      result: "",
+      unit: "",
+      normalRange: "",
+      status: "normal",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       {/* Header */}
@@ -649,44 +682,21 @@ export default function DoctorPatientsPage() {
                       open={openPatientId === patient.id}
                       onOpenChange={(open) => {
                         if (open) {
-                          setOpenPatientId(patient.id);
-                          setPatientUpdateForm({
-                            allergies: patient.allergies?.join(", ") || "",
-                            conditions: patient.conditions?.join(", ") || "",
-                            medications: patient.medications?.join(", ") || "",
-                            notes: patient.notes || "",
-                          });
-                          setRecordForm({
-                            title: "Wizyta",
-                            description: "",
-                            diagnosis: "",
-                            treatment: "",
-                          });
-                          setPrescriptionForm({
-                            medicationName: "",
-                            dosage: "",
-                            frequency: "",
-                            duration: "",
-                            instructions: "",
-                          });
-                          setLabForm({
-                            testName: "",
-                            result: "",
-                            unit: "",
-                            normalRange: "",
-                            status: "normal",
-                          });
+                          openPatientDialog(patient, openPatientTab);
                         } else {
                           setOpenPatientId(null);
                         }
                       }}
                     >
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Profil
-                        </Button>
-                      </DialogTrigger>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => openPatientDialog(patient, "profile")}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Profil
+                      </Button>
                       <DialogContent className="max-w-5xl">
                         <DialogHeader>
                           <DialogTitle>
@@ -723,13 +733,19 @@ export default function DoctorPatientsPage() {
                             </div>
                           </div>
 
-                          <Tabs defaultValue="profile" className="space-y-4">
+                          <Tabs
+                            value={openPatientTab}
+                            onValueChange={(value) =>
+                              setOpenPatientTab(value as "profile" | "visit" | "rx")
+                            }
+                            className="space-y-4"
+                          >
                             <TabsList className="grid w-full grid-cols-3">
                               <TabsTrigger value="profile">
-                                Profil medyczny
+                                Profil
                               </TabsTrigger>
                               <TabsTrigger value="visit">
-                                Wizyta / badania
+                                Wizyta
                               </TabsTrigger>
                               <TabsTrigger value="rx">Recepta</TabsTrigger>
                             </TabsList>
@@ -1072,14 +1088,24 @@ export default function DoctorPatientsPage() {
                       </DialogContent>
                     </Dialog>
 
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openPatientDialog(patient, "visit")}
+                    >
                       <Calendar className="h-4 w-4 mr-2" />
                       Wizyta
                     </Button>
 
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Wiadomość
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openPatientDialog(patient, "rx")}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Recepta
                     </Button>
                   </div>
                 </div>

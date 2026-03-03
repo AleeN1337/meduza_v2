@@ -47,6 +47,12 @@ import { toast } from "sonner";
 export default function DoctorAppointmentsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -74,7 +80,7 @@ export default function DoctorAppointmentsPage() {
 
       // Add date filter based on view mode
       if (viewMode === "day") {
-        const dateStr = selectedDate.toISOString().split("T")[0];
+        const dateStr = formatDateLocal(selectedDate);
         url += `date=${dateStr}&`;
       } else if (viewMode === "week") {
         const startOfWeek = new Date(selectedDate);
@@ -82,9 +88,9 @@ export default function DoctorAppointmentsPage() {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-        url += `startDate=${startOfWeek.toISOString().split("T")[0]}&endDate=${
-          endOfWeek.toISOString().split("T")[0]
-        }&`;
+        url += `startDate=${formatDateLocal(startOfWeek)}&endDate=${formatDateLocal(
+          endOfWeek
+        )}&`;
       } else if (viewMode === "month") {
         const startOfMonth = new Date(
           selectedDate.getFullYear(),
@@ -97,9 +103,9 @@ export default function DoctorAppointmentsPage() {
           0
         );
 
-        url += `startDate=${startOfMonth.toISOString().split("T")[0]}&endDate=${
-          endOfMonth.toISOString().split("T")[0]
-        }&`;
+        url += `startDate=${formatDateLocal(startOfMonth)}&endDate=${formatDateLocal(
+          endOfMonth
+        )}&`;
       }
 
       // Add status filter
@@ -177,7 +183,7 @@ export default function DoctorAppointmentsPage() {
   // Filter appointments based on current view
   const getFilteredAppointments = () => {
     if (viewMode === "day") {
-      const selectedDateString = selectedDate.toISOString().split("T")[0];
+      const selectedDateString = formatDateLocal(selectedDate);
       return appointments.filter((apt) => apt.date === selectedDateString);
     }
     return appointments;
@@ -522,33 +528,22 @@ export default function DoctorAppointmentsPage() {
                                           {appointment.notes}
                                         </p>
                                       </div>
-                                      <div className="flex space-x-2 pt-4">
-                                        {appointment.status === "scheduled" && (
-                                          <Button size="sm">
-                                            Rozpocznij wizytę
+                                      {appointment.status === "scheduled" && (
+                                        <div className="pt-4">
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() =>
+                                              openCancelDialog(appointment)
+                                            }
+                                          >
+                                            Anuluj wizytę
                                           </Button>
-                                        )}
-                                        {appointment.status ===
-                                          "in-progress" && (
-                                          <Button size="sm">
-                                            Zakończ wizytę
-                                          </Button>
-                                        )}
-                                        <Button variant="outline" size="sm">
-                                          Edytuj
-                                        </Button>
-                                        <Button variant="outline" size="sm">
-                                          <Phone className="h-4 w-4 mr-2" />
-                                          Zadzwoń
-                                        </Button>
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </DialogContent>
                                 </Dialog>
-
-                                <Button variant="ghost" size="sm">
-                                  <Edit3 className="h-4 w-4" />
-                                </Button>
 
                                 {appointment.status === "scheduled" && (
                                   <Button
@@ -566,28 +561,6 @@ export default function DoctorAppointmentsPage() {
                             </div>
                           </div>
 
-                          {/* Quick Actions for current appointment */}
-                          {appointment.status === "in-progress" && (
-                            <div className="mt-4 p-3 bg-blue-100 rounded-lg border border-blue-200">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <AlertCircle className="h-4 w-4 text-blue-600" />
-                                  <span className="text-sm font-medium text-blue-800">
-                                    Wizyta w trakcie
-                                  </span>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button size="sm" variant="outline">
-                                    Dodaj notatkę
-                                  </Button>
-                                  <Button size="sm" variant="outline">
-                                    Wystaw receptę
-                                  </Button>
-                                  <Button size="sm">Zakończ wizytę</Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </CardContent>
                       </Card>
                     ))}

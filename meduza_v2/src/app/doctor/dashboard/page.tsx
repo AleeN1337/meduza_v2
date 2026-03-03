@@ -52,6 +52,13 @@ export default function DoctorDashboardPage() {
     useNotificationStore();
   const router = useRouter();
 
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   // State for appointments
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<
@@ -87,7 +94,7 @@ export default function DoctorDashboardPage() {
 
   const fetchTodayAppointments = async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatDateLocal(new Date());
       const response = await fetch(`/api/appointments/doctor?date=${today}`, {
         headers: {
           Authorization: `Bearer ${useAuthStore.getState().token}`,
@@ -96,7 +103,11 @@ export default function DoctorDashboardPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setTodayAppointments(data.appointments || []);
+        const actualTodayAppointments = (data.appointments || []).filter(
+          (appointment: Appointment) =>
+            appointment.date === today && appointment.status !== "cancelled"
+        );
+        setTodayAppointments(actualTodayAppointments);
       }
     } catch (error) {
       console.error("Error fetching today's appointments:", error);
