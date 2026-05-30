@@ -70,6 +70,8 @@ export interface IUser extends Document {
     phone: string;
     relationship: string;
   };
+  notes?: string;
+  careStatus?: "active" | "needs-attention";
 
   // Patient medical data is managed separately through MedicalRecord and Appointment collections
   // upcomingAppointments?: Array<{...}>  - Use Appointment.find({ patientId, status: "scheduled" })
@@ -194,6 +196,12 @@ const UserSchema = new Schema<IUser>(
       name: String,
       phone: String,
       relationship: String,
+    },
+    notes: String,
+    careStatus: {
+      type: String,
+      enum: ["active", "needs-attention"],
+      default: "active",
     },
 
     // NOTE: Upcoming appointments, medical records, prescriptions and results
@@ -458,7 +466,7 @@ export interface INotification extends Document {
   priority: "low" | "medium" | "high" | "urgent";
   read: boolean;
   actionUrl?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;

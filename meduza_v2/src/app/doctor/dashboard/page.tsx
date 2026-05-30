@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store";
@@ -35,20 +35,15 @@ import {
   Plus,
   ChevronRight,
   Stethoscope,
-  Clipboard,
   TrendingUp,
-  MessageSquare,
-  AlertCircle,
   UserCheck,
   CalendarDays,
   BarChart3,
-  CheckCircle,
-  X,
 } from "lucide-react";
 
 export default function DoctorDashboardPage() {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { notifications, fetchNotifications, markAsRead, deleteNotifications } =
+  const { notifications, fetchNotifications, markAsRead } =
     useNotificationStore();
   const router = useRouter();
 
@@ -82,17 +77,7 @@ export default function DoctorDashboardPage() {
     router.push("/");
   };
 
-  // Fetch notifications and appointments on component mount
-  useEffect(() => {
-    if (user && user.role === "doctor") {
-      fetchNotifications();
-      fetchTodayAppointments();
-      fetchUpcomingAppointments();
-      fetchAllAppointments();
-    }
-  }, [user, fetchNotifications]);
-
-  const fetchTodayAppointments = async () => {
+  const fetchTodayAppointments = useCallback(async () => {
     try {
       const today = formatDateLocal(new Date());
       const response = await fetch(`/api/appointments/doctor?date=${today}`, {
@@ -114,9 +99,9 @@ export default function DoctorDashboardPage() {
     } finally {
       setIsLoadingAppointments(false);
     }
-  };
+  }, []);
 
-  const fetchUpcomingAppointments = async () => {
+  const fetchUpcomingAppointments = useCallback(async () => {
     try {
       const response = await fetch(
         "/api/appointments/doctor?status=scheduled&limit=10",
@@ -134,9 +119,9 @@ export default function DoctorDashboardPage() {
     } catch (error) {
       console.error("Error fetching upcoming appointments:", error);
     }
-  };
+  }, []);
 
-  const fetchAllAppointments = async () => {
+  const fetchAllAppointments = useCallback(async () => {
     try {
       const response = await fetch(
         "/api/appointments/doctor?status=all&limit=20",
@@ -154,14 +139,25 @@ export default function DoctorDashboardPage() {
     } catch (error) {
       console.error("Error fetching all appointments:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user && user.role === "doctor") {
+      void fetchNotifications();
+      void fetchTodayAppointments();
+      void fetchUpcomingAppointments();
+      void fetchAllAppointments();
+    }
+  }, [
+    user,
+    fetchNotifications,
+    fetchTodayAppointments,
+    fetchUpcomingAppointments,
+    fetchAllAppointments,
+  ]);
 
   const handleMarkNotificationAsRead = async (notificationId: string) => {
     await markAsRead([notificationId]);
-  };
-
-  const handleDeleteNotification = async (notificationId: string) => {
-    await deleteNotifications([notificationId]);
   };
 
   if (!user || user.role !== "doctor") return null;

@@ -35,15 +35,20 @@ import {
   Plus,
   Search,
   FileText,
-  User,
-  Calendar,
-  AlertTriangle,
   CheckCircle,
   Clock,
   Printer,
   Send,
   Eye,
 } from "lucide-react";
+
+interface PrescriptionPatient {
+  id: string;
+  _id?: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
 
 export default function DoctorPrescriptionsPage() {
   const router = useRouter();
@@ -52,7 +57,7 @@ export default function DoctorPrescriptionsPage() {
   const [selectedPatient, setSelectedPatient] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<PrescriptionPatient[]>([]);
   const [medications, setMedications] = useState([
     {
       id: 1,
@@ -77,7 +82,26 @@ export default function DoctorPrescriptionsPage() {
   ];
 
   // Mock data - wydane recepty (ze integracją MedicalRecord)
-  const issuedPrescriptions: any[] = [];
+  interface PrescriptionMedication {
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions?: string;
+  }
+
+  interface IssuedPrescription {
+    id: string;
+    patientName: string;
+    patientPesel?: string;
+    date: string;
+    diagnosis: string;
+    medications: PrescriptionMedication[];
+    validUntil: string;
+    status: string;
+  }
+
+  const issuedPrescriptions: IssuedPrescription[] = [];
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -260,7 +284,10 @@ export default function DoctorPrescriptionsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {patients.map((patient) => (
-                        <SelectItem key={patient._id} value={patient._id}>
+                        <SelectItem
+                          key={patient.id || patient._id}
+                          value={patient.id || patient._id || ""}
+                        >
                           {patient.firstName} {patient.lastName} - {patient.email}
                         </SelectItem>
                       ))}

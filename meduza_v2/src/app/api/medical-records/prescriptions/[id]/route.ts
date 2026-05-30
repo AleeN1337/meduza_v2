@@ -18,9 +18,10 @@ function getAuth(req: NextRequest) {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: prescriptionId } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -29,7 +30,6 @@ export async function PATCH(
       );
     }
 
-    const prescriptionId = params.id;
     if (!prescriptionId || !mongoose.Types.ObjectId.isValid(prescriptionId)) {
       return NextResponse.json(
         { success: false, message: "Invalid prescription id" },
@@ -89,7 +89,8 @@ export async function PATCH(
       "prescription doctorId patientId",
     );
     const updatedRx = updated?.prescription?.find(
-      (rx: any) => rx._id.toString() === prescriptionId,
+      (rx: { _id?: { toString(): string } }) =>
+        rx._id?.toString() === prescriptionId,
     );
 
     return NextResponse.json({

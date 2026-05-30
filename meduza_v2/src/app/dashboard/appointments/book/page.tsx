@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -26,7 +25,6 @@ import {
   Stethoscope,
   Star,
   MapPin,
-  Phone,
   Calendar as CalendarIcon,
   Loader2,
 } from "lucide-react";
@@ -255,6 +253,12 @@ export default function BookAppointmentPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {loading ? (
+          <div className="flex items-center justify-center py-24 text-gray-600">
+            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+            Ładowanie lekarzy...
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Wybór lekarza */}
           <div className="lg:col-span-2">
@@ -475,8 +479,16 @@ export default function BookAppointmentPage() {
                           onClick={handleBookAppointment}
                           className="w-full mt-4"
                           size="lg"
+                          disabled={booking}
                         >
-                          Potwierdź wizytę
+                          {booking ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Rezerwowanie...
+                            </>
+                          ) : (
+                            "Potwierdź wizytę"
+                          )}
                         </Button>
                       </div>
                     </CardContent>
@@ -486,6 +498,7 @@ export default function BookAppointmentPage() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

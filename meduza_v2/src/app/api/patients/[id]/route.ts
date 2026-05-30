@@ -19,9 +19,10 @@ function getAuth(req: NextRequest) {
 // GET: doctor can fetch patient profile, patient can fetch self
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -32,14 +33,14 @@ export async function GET(
 
     await connectDB();
 
-    if (auth.role !== "doctor" && auth.userId !== params.id) {
+    if (auth.role !== "doctor" && auth.userId !== id) {
       return NextResponse.json(
         { success: false, message: "Access denied" },
         { status: 403 },
       );
     }
 
-    const patient = await User.findById(params.id);
+    const patient = await User.findById(id);
     if (!patient || patient.role !== "patient") {
       return NextResponse.json(
         { success: false, message: "Patient not found" },
@@ -65,6 +66,7 @@ export async function GET(
         notes: patient.notes,
         height: patient.height,
         weight: patient.weight,
+        careStatus: patient.careStatus || "active",
       },
     });
   } catch (error) {
@@ -79,9 +81,10 @@ export async function GET(
 // PATCH: doctor can update medical info (allergies, conditions, medications, notes)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -104,9 +107,10 @@ export async function PATCH(
       conditions: true,
       emergencyContact: true,
       notes: true,
+      careStatus: true,
     };
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body || {})) {
       if (allowed[k]) updates[k] = v;
     }
@@ -121,7 +125,7 @@ export async function PATCH(
     await connectDB();
 
     const updated = await User.findByIdAndUpdate(
-      new mongoose.Types.ObjectId(params.id),
+      new mongoose.Types.ObjectId(id),
       updates,
       { new: true },
     );
@@ -149,6 +153,7 @@ export async function PATCH(
         conditions: updated.conditions || [],
         emergencyContact: updated.emergencyContact,
         notes: updated.notes,
+        careStatus: updated.careStatus || "active",
       },
     });
   } catch (error) {

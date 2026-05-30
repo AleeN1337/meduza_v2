@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore, useNotificationStore } from "@/store";
-import { Appointment, LabResult, Prescription, Notification } from "@/types";
 import {
   Card,
   CardContent,
@@ -15,7 +14,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -337,21 +335,10 @@ export default function DashboardPage() {
     inProgressPrescriptions.length > 0
       ? inProgressPrescriptions
       : activePrescriptions;
-  const userNotifications = user.notifications || [];
 
   // Filter appointments based on show all state and cancelled status
   const visibleAppointments = upcomingAppointments
     .filter((appointment) => {
-      // Hide appointments that are in cancelledAppointments set OR have cancelled status from API
-      // For debugging, let's show all appointments first
-      console.log(
-        "Appointment:",
-        appointment.id,
-        "Status:",
-        appointment.status,
-        "In cancelled set:",
-        cancelledAppointments.has(appointment.id)
-      );
       return (
         !cancelledAppointments.has(appointment.id) &&
         appointment.status !== "cancelled"

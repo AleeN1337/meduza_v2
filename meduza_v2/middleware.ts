@@ -1,16 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
+const maxAge = 7 * 24 * 60 * 60;
+
+function getToken(request: NextRequest): string | undefined {
+  return (
+    request.headers.get("authorization")?.replace("Bearer ", "") ||
+    request.cookies.get("auth-token")?.value
+  );
+}
+
+function getUserRole(request: NextRequest): string | undefined {
+  const authRole = request.cookies.get("auth-role")?.value;
+  if (authRole) return authRole;
+
+  const authStorage = request.cookies.get("auth-storage")?.value;
+  if (!authStorage) return undefined;
+
+  try {
+    const parsedAuth = JSON.parse(authStorage);
+    return parsedAuth.state?.user?.role;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for public routes
-  const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
-
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
-
-  // Skip middleware for API auth/profile routes
   if (
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/profile")
@@ -18,50 +35,39 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Check for authentication token
-  const token =
-    request.headers.get("authorization")?.replace("Bearer ", "") ||
-    request.cookies.get("auth-token")?.value;
+  const token = getToken(request);
 
   if (!token) {
-    // Redirect to login if no token
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { success: false, message: "Brak autoryzacji" },
+        { status: 401 },
+      );
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Role-based route protection
-  const authRole = request.cookies.get("auth-role")?.value;
-  const authStorage = request.cookies.get("auth-storage")?.value;
-  let userRole = authRole; // First try the simple cookie
+  const userRole = getUserRole(request);
 
-  // Fallback to parsing the auth storage
-  if (!userRole && authStorage) {
-    try {
-      const parsedAuth = JSON.parse(authStorage);
-      userRole = parsedAuth.state?.user?.role;
-    } catch (error) {
-      console.error("Failed to parse auth storage:", error);
-    }
-  }
-
-  console.log("Middleware - User role:", userRole, "Path:", pathname);
-
-  // Redirect based on role for dashboard access
   if (pathname === "/dashboard" && userRole === "doctor") {
     return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
   }
 
-  // Protect doctor routes
-  if (pathname.startsWith("/doctor") && userRole !== "doctor") {
+  if (pathname.startsWith("/doctor") && userRole && userRole !== "doctor") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Protect patient routes
   if (pathname.startsWith("/dashboard") && userRole === "doctor") {
     return NextResponse.redirect(new URL("/doctor/dashboard", request.url));
   }

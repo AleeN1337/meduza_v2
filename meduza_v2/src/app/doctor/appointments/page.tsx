@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,28 +21,35 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
   Clock,
-  User,
   Plus,
-  Edit3,
-  Trash2,
-  Phone,
-  Video,
-  MapPin,
   FileText,
-  AlertCircle,
   CheckCircle,
   XCircle,
-  Filter,
   X,
 } from "lucide-react";
 import { useAuthStore } from "@/store";
 import { toast } from "sonner";
+
+interface DoctorAppointment {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  patientName: string;
+  doctorName: string;
+  date: string;
+  time: string;
+  status: string;
+  type: string;
+  notes?: string;
+  symptoms?: string;
+  duration: number;
+  createdAt: string;
+}
 
 export default function DoctorAppointmentsPage() {
   const router = useRouter();
@@ -55,25 +62,17 @@ export default function DoctorAppointmentsPage() {
   };
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<DoctorAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  // Cancel appointment dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [appointmentToCancel, setAppointmentToCancel] = useState<any>(null);
+  const [appointmentToCancel, setAppointmentToCancel] =
+    useState<DoctorAppointment | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Fetch appointments on component mount and when filters change
-  useEffect(() => {
-    if (user && user.role === "doctor") {
-      fetchAppointments();
-    }
-  }, [user, viewMode, selectedDate, filterStatus]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       setIsLoading(true);
       let url = "/api/appointments/doctor?";
@@ -124,14 +123,19 @@ export default function DoctorAppointmentsPage() {
       if (response.ok) {
         const data = await response.json();
         setAppointments(data.appointments || []);
-        setFilteredAppointments(data.appointments || []);
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [viewMode, selectedDate, filterStatus]);
+
+  useEffect(() => {
+    if (user && user.role === "doctor") {
+      void fetchAppointments();
+    }
+  }, [user, fetchAppointments]);
 
   const handleCancelAppointment = async () => {
     if (!appointmentToCancel || !cancellationReason.trim()) {
@@ -174,7 +178,7 @@ export default function DoctorAppointmentsPage() {
     }
   };
 
-  const openCancelDialog = (appointment: any) => {
+  const openCancelDialog = (appointment: DoctorAppointment) => {
     setAppointmentToCancel(appointment);
     setCancellationReason("");
     setCancelDialogOpen(true);
@@ -397,7 +401,11 @@ export default function DoctorAppointmentsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {todayAppointments.length > 0 ? (
+                {isLoading ? (
+                  <div className="py-12 text-center text-gray-500">
+                    Ładowanie wizyt...
+                  </div>
+                ) : todayAppointments.length > 0 ? (
                   <div className="space-y-4">
                     {todayAppointments.map((appointment) => (
                       <Card

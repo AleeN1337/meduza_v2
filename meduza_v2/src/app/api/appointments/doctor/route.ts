@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import connectDB from "@/lib/db";
-import { Appointment, User } from "@/models";
+import { Appointment, IAppointment } from "@/models";
+import { FilterQuery } from "mongoose";
 
 // Helper function to verify JWT token
 function verifyToken(token: string) {
@@ -11,7 +12,7 @@ function verifyToken(token: string) {
       email: string;
       role: string;
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     // Build query
-    const query: any = {
+    const query: FilterQuery<IAppointment> = {
       doctorId: decoded.userId,
     };
 

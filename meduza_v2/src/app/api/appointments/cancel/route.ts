@@ -11,7 +11,7 @@ function verifyToken(token: string) {
       email: string;
       role: string;
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,34 +13,8 @@ import { toast } from "sonner";
 import { User, Camera, Shield, Heart, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  avatar?: string;
-  phone?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  bloodType?: string;
-  allergies?: string[];
-  medications?: string[];
-  conditions?: string[];
-  height?: number;
-  weight?: number;
-  emergencyContact?: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
 export default function ProfilePage() {
   const { user, setUser, token } = useAuthStore();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -79,11 +53,7 @@ export default function ProfilePage() {
   const [newMedication, setNewMedication] = useState("");
   const [newCondition, setNewCondition] = useState("");
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch("/api/profile", {
         headers: {
@@ -93,7 +63,6 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         const userData = data.user || data;
-        setProfile(userData);
         setPersonalData({
           name: `${userData.firstName || ""} ${userData.lastName || ""}`.trim(),
           email: userData.email || "",
@@ -118,12 +87,16 @@ export default function ProfilePage() {
       } else {
         toast.error("Błąd podczas pobierania profilu");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd podczas pobierania profilu");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
 
   const updatePersonalData = async () => {
     setSaving(true);
@@ -152,7 +125,7 @@ export default function ProfilePage() {
       } else {
         toast.error("Błąd podczas aktualizacji danych osobowych");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd podczas aktualizacji danych osobowych");
     } finally {
       setSaving(false);
@@ -184,7 +157,7 @@ export default function ProfilePage() {
       } else {
         toast.error("Błąd podczas aktualizacji informacji medycznych");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd podczas aktualizacji informacji medycznych");
     } finally {
       setSaving(false);
@@ -222,7 +195,7 @@ export default function ProfilePage() {
         const error = await response.json();
         toast.error(error.message || "Błąd podczas zmiany hasła");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd podczas zmiany hasła");
     } finally {
       setSaving(false);
@@ -249,7 +222,7 @@ export default function ProfilePage() {
       } else {
         toast.error("Błąd podczas uploadu zdjęcia");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd podczas uploadu zdjęcia");
     }
   };

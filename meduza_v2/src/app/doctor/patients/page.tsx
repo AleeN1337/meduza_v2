@@ -32,8 +32,6 @@ import {
   AlertTriangle,
   Eye,
   MoreVertical,
-  Clock,
-  Activity,
   Loader2,
 } from "lucide-react";
 import { useAuthStore } from "@/store";
@@ -59,7 +57,7 @@ interface Patient {
   nextAppointment: string | null;
   nextAppointmentId?: string | null;
   totalVisits: number;
-  status: string;
+  status: "active" | "inactive" | "needs-attention";
   avatar: string | null;
   notes?: string;
 }
@@ -93,6 +91,7 @@ export default function DoctorPatientsPage() {
     conditions: "",
     medications: "",
     notes: "",
+    careStatus: "active" as "active" | "needs-attention",
   });
   const [labForm, setLabForm] = useState({
     testName: "",
@@ -159,6 +158,7 @@ export default function DoctorPatientsPage() {
             ? patientUpdateForm.medications.split(",").map((s) => s.trim())
             : [],
           notes: patientUpdateForm.notes,
+          careStatus: patientUpdateForm.careStatus,
         }),
       });
       if (!res.ok) {
@@ -166,7 +166,20 @@ export default function DoctorPatientsPage() {
       }
       const data = await res.json();
       setPatients((prev) =>
-        prev.map((p) => (p.id === patientId ? { ...p, ...data.patient } : p)),
+        prev.map((p) =>
+          p.id === patientId
+            ? {
+                ...p,
+                ...data.patient,
+                status:
+                  data.patient?.careStatus === "needs-attention"
+                    ? "needs-attention"
+                    : p.status === "inactive"
+                      ? "inactive"
+                      : "active",
+              }
+            : p,
+        ),
       );
     } catch (err) {
       setError((err as Error).message);
@@ -305,29 +318,6 @@ export default function DoctorPatientsPage() {
     }
   };
 
-  const updateAppointmentStatus = async (
-    appointmentId: string,
-    status: string,
-    cancellationReason?: string,
-  ) => {
-    try {
-      setError(null);
-      setSaving(true);
-      await fetch(`/api/appointments/${appointmentId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status, cancellationReason }),
-      });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
       patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -336,23 +326,15 @@ export default function DoctorPatientsPage() {
 
     const matchesFilter =
       selectedFilter === "all" ||
-      (selectedFilter === "active" && patient.status === "active") ||
-      (selectedFilter === "attention" && patient.status === "needs-attention") ||
-      (selectedFilter === "recent" &&
-        patient.lastVisit &&
-        patient.lastVisit >= "2025-07-01");
+      (selectedFilter === "attention" && patient.status === "needs-attention");
 
     return matchesSearch && matchesFilter;
   });
 
   const stats = {
     totalPatients: patients.length,
-    activePatients: patients.filter((p) => p.status === "active").length,
     needsAttention: patients.filter((p) => p.status === "needs-attention")
       .length,
-    recentVisits: patients.filter(
-      (p) => p.lastVisit && p.lastVisit >= "2025-07-01",
-    ).length,
   };
 
   const calculateAge = (birthDate?: string) => {
@@ -382,6 +364,8 @@ export default function DoctorPatientsPage() {
       conditions: patient.conditions?.join(", ") || "",
       medications: patient.medications?.join(", ") || "",
       notes: patient.notes || "",
+      careStatus:
+        patient.status === "needs-attention" ? "needs-attention" : "active",
     });
     setRecordForm({
       title: "Wizyta",
@@ -434,13 +418,20 @@ export default function DoctorPatientsPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {loading ? (
+          <div className="flex items-center justify-center py-24 text-gray-600">
+            <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+            Ładowanie pacjentów...
+          </div>
+        ) : (
+          <>
         {error && (
           <div className="mb-6 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
@@ -456,34 +447,10 @@ export default function DoctorPatientsPage() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <Activity className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.activePatients}</p>
-                  <p className="text-sm text-gray-600">Aktywni</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
                 <AlertTriangle className="h-8 w-8 text-orange-600" />
                 <div>
                   <p className="text-2xl font-bold">{stats.needsAttention}</p>
                   <p className="text-sm text-gray-600">Wymaga uwagi</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <Clock className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.recentVisits}</p>
-                  <p className="text-sm text-gray-600">Ostatnie wizyty</p>
                 </div>
               </div>
             </CardContent>
@@ -512,25 +479,11 @@ export default function DoctorPatientsPage() {
                   Wszyscy
                 </Button>
                 <Button
-                  variant={selectedFilter === "active" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedFilter("active")}
-                >
-                  Aktywni
-                </Button>
-                <Button
                   variant={selectedFilter === "attention" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedFilter("attention")}
                 >
                   Wymaga uwagi
-                </Button>
-                <Button
-                  variant={selectedFilter === "recent" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedFilter("recent")}
-                >
-                  Ostatnie
                 </Button>
               </div>
             </div>
@@ -580,10 +533,16 @@ export default function DoctorPatientsPage() {
                   <div className="flex items-center space-x-2">
                     <Badge
                       variant={
-                        patient.status === "active" ? "default" : "destructive"
+                        patient.status === "needs-attention"
+                          ? "destructive"
+                          : "default"
                       }
                     >
-                      {patient.status === "active" ? "Aktywny" : "Wymaga uwagi"}
+                      {patient.status === "needs-attention"
+                        ? "Wymaga uwagi"
+                        : patient.status === "inactive"
+                          ? "Nieaktywny"
+                          : "Aktywny"}
                     </Badge>
                     <Button variant="ghost" size="sm">
                       <MoreVertical className="h-4 w-4" />
@@ -673,6 +632,12 @@ export default function DoctorPatientsPage() {
                       <p className="text-gray-600 text-xs bg-gray-50 p-2 rounded">
                         {patient.notes}
                       </p>
+                    </div>
+                  )}
+
+                  {patient.status === "needs-attention" && (
+                    <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                      Pacjent oznaczony jako: <strong>Wymaga uwagi</strong>
                     </div>
                   )}
 
@@ -809,6 +774,35 @@ export default function DoctorPatientsPage() {
                                       {condition}
                                     </Badge>
                                   ))}
+                                </div>
+                                <div className="rounded-md border bg-gray-50 p-3 space-y-2">
+                                  <p className="text-xs font-medium text-gray-600">
+                                    Status opieki pacjenta
+                                  </p>
+                                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        patientUpdateForm.careStatus ===
+                                        "needs-attention"
+                                      }
+                                      onChange={(e) =>
+                                        setPatientUpdateForm((prev) => ({
+                                          ...prev,
+                                          careStatus: e.target.checked
+                                            ? "needs-attention"
+                                            : "active",
+                                        }))
+                                      }
+                                    />
+                                    Wymaga uwagi
+                                  </label>
+                                  {patientUpdateForm.careStatus ===
+                                    "needs-attention" && (
+                                    <p className="text-xs text-red-600">
+                                      Pacjent jest oznaczony jako wymagający uwagi.
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="flex justify-end">
                                   <Button
@@ -1131,6 +1125,8 @@ export default function DoctorPatientsPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+          </>
         )}
       </div>
     </div>

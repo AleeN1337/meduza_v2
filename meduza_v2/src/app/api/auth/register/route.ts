@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/db";
-import { User } from "@/models";
+import { User, IUser } from "@/models";
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,7 +92,15 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create user data object
-    const userData: any = {
+    const userData: Partial<IUser> & {
+      firstName: string;
+      lastName: string;
+      email: string;
+      password: string;
+      role: "patient" | "doctor" | "admin";
+      isActive: boolean;
+      phone?: string;
+    } = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.toLowerCase().trim(),

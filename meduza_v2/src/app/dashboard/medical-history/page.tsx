@@ -14,41 +14,88 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   ArrowLeft,
   FileText,
   TestTube,
   Pill,
-  Camera,
-  Download,
-  Eye,
   Calendar,
   User,
   Clock,
   Stethoscope,
   AlertTriangle,
   Heart,
-  Activity,
   Loader,
 } from "lucide-react";
+
+interface ProfileSummary {
+  allergies?: string[];
+  conditions?: string[];
+}
+
+interface HistoryAppointment {
+  id?: string;
+  date: string;
+  time: string;
+  status?: string;
+  doctorName?: string;
+  type?: string;
+  specialty?: string;
+  notes?: string;
+}
+
+interface HistoryMedicalRecord {
+  _id: string;
+  title: string;
+  description?: string;
+  treatment?: string;
+  date: string;
+  symptoms?: string[];
+  diagnosis?: string[];
+  doctorId?: {
+    firstName?: string;
+    lastName?: string;
+    specialization?: string;
+  };
+  prescription?: HistoryPrescription[];
+}
+
+interface HistoryPrescription {
+  id?: string;
+  _id?: string;
+  medicationName: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  instructions?: string;
+  status?: string;
+  fulfilledAt?: string;
+  doctorName?: string;
+  prescribedDate?: string;
+  description?: string;
+}
+
+interface HistoryLabResult {
+  id?: string;
+  testName: string;
+  result: string;
+  unit?: string;
+  normalRange?: string;
+  status?: string;
+  recordDate?: string;
+  doctorName?: string;
+}
 
 export default function MedicalHistoryPage() {
   const router = useRouter();
   const { token, isAuthenticated } = useAuthStore();
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [medicalRecords, setMedicalRecords] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [labResults, setLabResults] = useState<any[]>([]);
-  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [medicalRecords, setMedicalRecords] = useState<HistoryMedicalRecord[]>(
+    [],
+  );
+  const [appointments, setAppointments] = useState<HistoryAppointment[]>([]);
+  const [labResults, setLabResults] = useState<HistoryLabResult[]>([]);
+  const [prescriptions, setPrescriptions] = useState<HistoryPrescription[]>([]);
   const [fulfillingId, setFulfillingId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<ProfileSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,25 +120,25 @@ export default function MedicalHistoryPage() {
         }
 
         // Fetch medical records (wizyty) and derive prescriptions fallback
-        let derivedPrescriptions: any[] = [];
+        let derivedPrescriptions: HistoryPrescription[] = [];
         const recordsRes = await fetch("/api/medical-records", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (recordsRes.ok) {
           const recordsData = await recordsRes.json();
-          const allRecords = recordsData.records || [];
+          const allRecords: HistoryMedicalRecord[] = recordsData.records || [];
           const visitOnly = allRecords.filter(
-            (rec: any) => !rec.prescription || rec.prescription.length === 0,
+            (rec) => !rec.prescription || rec.prescription.length === 0,
           );
           setMedicalRecords(visitOnly);
 
           // Derive prescriptions from records in case the separate endpoint is empty
-          derivedPrescriptions = allRecords.flatMap((rec: any, idx: number) => {
+          derivedPrescriptions = allRecords.flatMap((rec, idx) => {
             if (!rec.prescription || rec.prescription.length === 0) return [];
             const doctorName = rec.doctorId
-              ? `${rec.doctorId.firstName} ${rec.doctorId.lastName}`
+              ? `${rec.doctorId.firstName ?? ""} ${rec.doctorId.lastName ?? ""}`.trim()
               : "Lekarz";
-            return rec.prescription.map((rx: any, rxIdx: number) => ({
+            return rec.prescription.map((rx, rxIdx) => ({
               ...rx,
               id: rx._id?.toString() || `rx-rec-${rec._id}-${idx}-${rxIdx}`,
               recordId: rec._id,
@@ -128,8 +175,8 @@ export default function MedicalHistoryPage() {
           const apiPrescriptions = resultsData.prescriptions || [];
           const combined = [...apiPrescriptions, ...derivedPrescriptions];
           // Ensure unique by id to avoid doubles when both sources deliver data
-          const unique = new Map<string, any>();
-          combined.forEach((rx: any, idx: number) => {
+          const unique = new Map<string, HistoryPrescription>();
+          combined.forEach((rx, idx) => {
             const key = rx.id || `rx-${idx}`;
             if (!unique.has(key)) unique.set(key, rx);
           });
@@ -149,8 +196,8 @@ export default function MedicalHistoryPage() {
     fetchData();
   }, [token, isAuthenticated, router]);
 
-  const allergies = userProfile?.allergies || [];
-  const chronicConditions = userProfile?.conditions || [];
+  const allergies: string[] = userProfile?.allergies || [];
+  const chronicConditions: string[] = userProfile?.conditions || [];
   const activePrescriptions = prescriptions.filter(
     (rx) => rx.status !== "fulfilled",
   );
@@ -178,11 +225,6 @@ export default function MedicalHistoryPage() {
   const upcomingAppointments = normalizedAppointments.filter((apt) => {
     const status = (apt.status || "").toLowerCase();
     return !status.includes("cancel") && !status.includes("completed");
-  });
-
-  const completedAppointments = normalizedAppointments.filter((apt) => {
-    const status = (apt.status || "").toLowerCase();
-    return status.includes("completed");
   });
 
   const fulfillPrescription = async (rxId: string) => {
@@ -454,13 +496,13 @@ export default function MedicalHistoryPage() {
                                 </p>
                               </div>
 
-                              {record.symptoms?.length > 0 && (
+                              {(record.symptoms?.length ?? 0) > 0 && (
                                 <div>
                                   <h4 className="font-medium text-sm mb-1">
                                     Objawy:
                                   </h4>
                                   <div className="flex flex-wrap gap-1">
-                                    {record.symptoms.map(
+                                    {(record.symptoms ?? []).map(
                                       (symptom: string, index: number) => (
                                         <Badge
                                           key={index}
@@ -475,13 +517,13 @@ export default function MedicalHistoryPage() {
                                 </div>
                               )}
 
-                              {record.diagnosis?.length > 0 && (
+                              {(record.diagnosis?.length ?? 0) > 0 && (
                                 <div>
                                   <h4 className="font-medium text-sm mb-1">
                                     Diagnoza:
                                   </h4>
                                   <div className="flex flex-wrap gap-1">
-                                    {record.diagnosis.map(
+                                    {(record.diagnosis ?? []).map(
                                       (diag: string, index: number) => (
                                         <Badge
                                           key={index}
@@ -535,9 +577,11 @@ export default function MedicalHistoryPage() {
                                 {lab.testName}
                               </CardTitle>
                               <CardDescription>
-                                {new Date(lab.recordDate).toLocaleDateString(
-                                  "pl-PL",
-                                )}{" "}
+                                {lab.recordDate
+                                  ? new Date(lab.recordDate).toLocaleDateString(
+                                      "pl-PL",
+                                    )
+                                  : "—"}{" "}
                                 - {lab.doctorName}
                               </CardDescription>
                             </div>
@@ -605,18 +649,22 @@ export default function MedicalHistoryPage() {
                                   </CardTitle>
                                   <CardDescription>
                                     Przepisane przez {prescription.doctorName} -{" "}
-                                    {new Date(
-                                      prescription.prescribedDate,
-                                    ).toLocaleDateString("pl-PL")}
+                                    {prescription.prescribedDate
+                                      ? new Date(
+                                          prescription.prescribedDate,
+                                        ).toLocaleDateString("pl-PL")
+                                      : "—"}
                                   </CardDescription>
                                 </div>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   disabled={fulfillingId === prescription.id}
-                                  onClick={() =>
-                                    fulfillPrescription(prescription.id)
-                                  }
+                                  onClick={() => {
+                                    if (prescription.id) {
+                                      void fulfillPrescription(prescription.id);
+                                    }
+                                  }}
                                 >
                                   {fulfillingId === prescription.id
                                     ? "Realizuję..."
@@ -696,9 +744,11 @@ export default function MedicalHistoryPage() {
                                   </CardTitle>
                                   <CardDescription>
                                     Przepisane przez {prescription.doctorName} -{" "}
-                                    {new Date(
-                                      prescription.prescribedDate,
-                                    ).toLocaleDateString("pl-PL")}
+                                    {prescription.prescribedDate
+                                      ? new Date(
+                                          prescription.prescribedDate,
+                                        ).toLocaleDateString("pl-PL")
+                                      : "—"}
                                   </CardDescription>
                                 </div>
                                 <Badge variant="outline">Zrealizowana</Badge>
@@ -752,9 +802,11 @@ export default function MedicalHistoryPage() {
                                       Zrealizowano
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                      {new Date(
-                                        prescription.fulfilledAt,
-                                      ).toLocaleDateString("pl-PL")}
+                                      {prescription.fulfilledAt
+                                        ? new Date(
+                                            prescription.fulfilledAt,
+                                          ).toLocaleDateString("pl-PL")
+                                        : "—"}
                                     </p>
                                   </div>
                                 )}

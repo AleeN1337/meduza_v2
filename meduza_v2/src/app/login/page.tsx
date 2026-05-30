@@ -16,7 +16,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -62,7 +61,7 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard");
       }
-    } catch (error) {
+    } catch {
       toast.error("Błąd logowania. Sprawdź dane i spróbuj ponownie.");
     }
   };

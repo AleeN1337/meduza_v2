@@ -119,7 +119,7 @@ export async function PATCH(req: NextRequest) {
       onlineFee: true,
     };
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body || {})) {
       if (allowed[k]) updates[k] = v;
     }
@@ -133,7 +133,7 @@ export async function PATCH(req: NextRequest) {
 
     await connectDB();
     if (updates.dateOfBirth) {
-      updates.dateOfBirth = new Date(updates.dateOfBirth);
+      updates.dateOfBirth = new Date(String(updates.dateOfBirth));
     }
     updates.lastProfileUpdate = new Date();
 

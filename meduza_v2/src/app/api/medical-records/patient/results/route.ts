@@ -16,6 +16,48 @@ function getAuth(req: NextRequest) {
   }
 }
 
+interface LabResultItem {
+  testName: string;
+  result: string;
+  normalRange?: string;
+  unit?: string;
+  status?: "normal" | "abnormal" | "critical";
+}
+
+interface PrescriptionItem {
+  _id?: { toString(): string };
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string;
+  status?: "active" | "fulfilled";
+  fulfilledAt?: Date;
+  toObject?: () => PrescriptionItem;
+}
+
+interface AggregatedLabResult extends LabResultItem {
+  id: string;
+  recordId: unknown;
+  doctorName: string;
+  recordDate: Date;
+}
+
+interface AggregatedPrescription {
+  id: string;
+  recordId: unknown;
+  doctorName: string;
+  prescribedDate: Date;
+  description?: string;
+  status: "active" | "fulfilled";
+  fulfilledAt?: Date;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = getAuth(req);
@@ -44,11 +86,11 @@ export async function GET(req: NextRequest) {
       .sort({ date: -1 });
 
     // Extract lab results from all records
-    const labResults: any[] = [];
+    const labResults: AggregatedLabResult[] = [];
     let labIndex = 0;
     records.forEach((record) => {
       if (record.labResults && Array.isArray(record.labResults)) {
-        record.labResults.forEach((result: any) => {
+        record.labResults.forEach((result: LabResultItem) => {
           labResults.push({
             ...result,
             id: `lab-${record._id}-${labIndex}`,
@@ -62,11 +104,11 @@ export async function GET(req: NextRequest) {
     });
 
     // Extract prescriptions from all records (as plain objects to keep all fields)
-    const prescriptions: any[] = [];
+    const prescriptions: AggregatedPrescription[] = [];
     let rxIndex = 0;
     records.forEach((record) => {
       if (record.prescription && Array.isArray(record.prescription)) {
-        record.prescription.forEach((rx: any) => {
+        record.prescription.forEach((rx: PrescriptionItem) => {
           const plainRx = typeof rx.toObject === "function" ? rx.toObject() : rx;
           prescriptions.push({
             id: plainRx._id?.toString() || `rx-${record._id}-${rxIndex}`,

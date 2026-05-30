@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       }
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const upload = await new Promise<any>((resolve, reject) => {
+      const upload = await new Promise<{ secure_url: string }>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: "meduza/avatars",
@@ -69,7 +69,11 @@ export async function POST(req: NextRequest) {
           },
           (error, result) => {
             if (error) reject(error);
-            else resolve(result);
+            else if (result?.secure_url) {
+              resolve({ secure_url: result.secure_url });
+            } else {
+              reject(new Error("Upload failed"));
+            }
           }
         );
         stream.end(buffer);

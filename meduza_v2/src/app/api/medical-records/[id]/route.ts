@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import connectDB from "@/lib/db";
-import { MedicalRecord, User } from "@/models";
-import mongoose from "mongoose";
+import { MedicalRecord } from "@/models";
 
 function getAuth(req: NextRequest) {
   const header = req.headers.get("authorization");
@@ -18,9 +17,10 @@ function getAuth(req: NextRequest) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function GET(
 
     await connectDB();
 
-    const record = await MedicalRecord.findById(params.id)
+    const record = await MedicalRecord.findById(id)
       .populate("patientId", "firstName lastName email")
       .populate("doctorId", "firstName lastName specialization")
       .populate("appointmentId", "date time status");
@@ -76,9 +76,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -96,7 +97,7 @@ export async function PATCH(
 
     await connectDB();
 
-    const record = await MedicalRecord.findById(params.id);
+    const record = await MedicalRecord.findById(id);
     if (!record) {
       return NextResponse.json(
         { success: false, message: "Medical record not found" },
@@ -124,7 +125,7 @@ export async function PATCH(
       "files",
     ];
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) {
         updates[field] = body[field];
@@ -139,7 +140,7 @@ export async function PATCH(
     }
 
     const updatedRecord = await MedicalRecord.findByIdAndUpdate(
-      params.id,
+      id,
       updates,
       { new: true },
     )
@@ -163,9 +164,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -183,7 +185,7 @@ export async function DELETE(
 
     await connectDB();
 
-    const record = await MedicalRecord.findById(params.id);
+    const record = await MedicalRecord.findById(id);
     if (!record) {
       return NextResponse.json(
         { success: false, message: "Medical record not found" },
@@ -199,7 +201,7 @@ export async function DELETE(
       );
     }
 
-    await MedicalRecord.findByIdAndDelete(params.id);
+    await MedicalRecord.findByIdAndDelete(id);
 
     return NextResponse.json({
       success: true,

@@ -40,9 +40,7 @@ const calculateProfileCompletion = (user: User): number => {
     ];
 
     let score = 0;
-    const totalFields = requiredFields.length + optionalFields.length;
 
-    // Required fields (70% weight)
     const requiredScore = requiredFields.filter((field) => {
       const value = user[field as keyof User];
       if (Array.isArray(value)) return value.length > 0;
@@ -80,7 +78,6 @@ const calculateProfileCompletion = (user: User): number => {
     ];
 
     let score = 0;
-    const totalFields = requiredFields.length + optionalFields.length;
 
     const requiredScore = requiredFields.filter((field) => {
       const value = user[field as keyof User];
@@ -131,12 +128,19 @@ export const useAuthStore = create<AuthState>()(
 
             const data = await response.json();
 
+            const maxAge = 7 * 24 * 60 * 60;
+
             set({
               user: data.user,
               token: data.token,
               isAuthenticated: true,
               isLoading: false,
             });
+
+            if (typeof document !== "undefined") {
+              document.cookie = `auth-role=${data.user.role}; Path=/; SameSite=Strict; Max-Age=${maxAge}`;
+              document.cookie = `auth-token=${data.token}; Path=/; SameSite=Strict; Max-Age=${maxAge}`;
+            }
           } catch (error) {
             set({ isLoading: false });
             throw error;
@@ -153,6 +157,8 @@ export const useAuthStore = create<AuthState>()(
           if (typeof document !== "undefined") {
             document.cookie =
               "auth-role=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+            document.cookie =
+              "auth-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
           }
         },
 
@@ -228,8 +234,13 @@ export const useAppointmentStore = create<AppointmentState>()(
     fetchAppointments: async () => {
       set({ isLoading: true });
       try {
-        const { token } = useAuthStore.getState();
-        const response = await fetch("/api/appointments", {
+        const { token, user } = useAuthStore.getState();
+        const endpoint =
+          user?.role === "doctor"
+            ? "/api/appointments/doctor?status=all&limit=50"
+            : "/api/appointments/patient?status=all&limit=50";
+
+        const response = await fetch(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -239,8 +250,8 @@ export const useAppointmentStore = create<AppointmentState>()(
           throw new Error("Failed to fetch appointments");
         }
 
-        const appointments = await response.json();
-        set({ appointments, isLoading: false });
+        const data = await response.json();
+        set({ appointments: data.appointments ?? [], isLoading: false });
       } catch (error) {
         set({ isLoading: false });
         throw error;
@@ -249,7 +260,7 @@ export const useAppointmentStore = create<AppointmentState>()(
 
     addAppointment: async (appointmentData) => {
       const { token } = useAuthStore.getState();
-      const response = await fetch("/api/appointments", {
+      const response = await fetch("/api/appointments/book", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -264,7 +275,10 @@ export const useAppointmentStore = create<AppointmentState>()(
 
       const newAppointment = await response.json();
       set((state) => ({
-        appointments: [...state.appointments, newAppointment],
+        appointments: [
+          ...state.appointments,
+          newAppointment.appointment ?? newAppointment,
+        ],
       }));
     },
 
@@ -306,7 +320,7 @@ export interface NotificationData {
   priority: "low" | "medium" | "high" | "urgent";
   read: boolean;
   actionUrl?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   createdAt: string;
 }
 

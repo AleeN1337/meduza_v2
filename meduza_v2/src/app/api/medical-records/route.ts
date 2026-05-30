@@ -145,7 +145,15 @@ export async function POST(req: NextRequest) {
       symptoms: Array.isArray(symptoms) ? symptoms : [],
       treatment: treatment.trim(),
       prescription: Array.isArray(prescription)
-        ? prescription.map((rx: any) => ({
+        ? prescription.map((rx: {
+            medicationName: string;
+            dosage: string;
+            frequency: string;
+            duration: string;
+            instructions?: string;
+            status?: "active" | "fulfilled";
+            fulfilledAt?: Date;
+          }) => ({
             medicationName: rx.medicationName,
             dosage: rx.dosage,
             frequency: rx.frequency,

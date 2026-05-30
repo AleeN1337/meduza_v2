@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import connectDB from "@/lib/db";
-import { Appointment, User } from "@/models";
+import { Appointment, IAppointment } from "@/models";
+import { FilterQuery } from "mongoose";
 
-// Helper function to verify JWT token
 function verifyToken(token: string) {
   try {
     return jwt.verify(token, process.env.JWT_SECRET!) as {
@@ -11,7 +11,7 @@ function verifyToken(token: string) {
       email: string;
       role: string;
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -20,36 +20,29 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
-    // Verify authentication
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, message: "Brak autoryzacji" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const token = authHeader.substring(7);
     const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      console.error("Invalid token or missing userId");
+    if (!decoded?.userId) {
       return NextResponse.json(
         { success: false, message: "Nieprawidłowy token" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    console.log("Decoded token:", decoded);
-    console.log("User ID from token:", decoded.userId);
-
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "scheduled";
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
     const upcoming = searchParams.get("upcoming") === "true";
 
-    // Build query
-    const query: any = {
+    const query: FilterQuery<IAppointment> = {
       patientId: decoded.userId,
     };
 
@@ -59,21 +52,17 @@ export async function GET(request: NextRequest) {
 
     if (upcoming) {
       const now = new Date();
-      console.log("Current date for upcoming filter:", now);
-      // For debugging, let's also get past appointments
       if (searchParams.get("includePast") === "true") {
         query.date = {
           $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
         };
-        query.status = { $nin: ["completed"] }; // Show all except completed
+        query.status = { $nin: ["completed"] };
       } else {
         query.date = { $gte: now };
         query.status = { $in: ["scheduled", "rescheduled"] };
       }
-      console.log("Upcoming query:", query);
     }
 
-    // Get appointments with doctor details
     const appointments = await Appointment.find(query)
       .populate({
         path: "doctorId",
@@ -83,42 +72,31 @@ export async function GET(request: NextRequest) {
       .sort({ date: upcoming ? 1 : -1, time: 1 })
       .limit(limit);
 
-    console.log("Query:", query);
-    console.log("Found appointments count:", appointments.length);
-    console.log("Raw appointments:", appointments);
+    const formattedAppointments = appointments.map((appointment) => {
+      const doctor = appointment.doctorId as {
+        firstName?: string;
+        lastName?: string;
+        specialization?: string;
+        avatar?: string;
+      } | null;
 
-    // Format appointments for frontend
-    const formattedAppointments = appointments
-      .map((appointment) => {
-        console.log("Processing appointment:", appointment._id);
-        console.log("Doctor data:", appointment.doctorId);
-
-        const doctorName = appointment.doctorId
-          ? `${appointment.doctorId.firstName} ${appointment.doctorId.lastName}`
-          : "Lekarz nieznany";
-        const specialty =
-          appointment.doctorId?.specialization || "Specjalizacja nieznana";
-        const avatar = appointment.doctorId?.avatar || null;
-
-        return {
-          id: appointment._id,
-          doctorName,
-          specialty,
-          avatar,
-          date: appointment.date.toISOString().split("T")[0],
-          time: appointment.time,
-          type: appointment.type,
-          status: appointment.status,
-          notes: appointment.notes,
-          symptoms: appointment.symptoms,
-          duration: appointment.duration,
-          createdAt: appointment.createdAt,
-          rawDate: appointment.date, // For debugging
-        };
-      })
-      .filter(Boolean); // Remove null entries
-
-    console.log("Formatted appointments:", formattedAppointments);
+      return {
+        id: appointment._id,
+        doctorName: doctor
+          ? `${doctor.firstName ?? ""} ${doctor.lastName ?? ""}`.trim()
+          : "Lekarz nieznany",
+        specialty: doctor?.specialization || "Specjalizacja nieznana",
+        avatar: doctor?.avatar || null,
+        date: appointment.date.toISOString().split("T")[0],
+        time: appointment.time,
+        type: appointment.type,
+        status: appointment.status,
+        notes: appointment.notes,
+        symptoms: appointment.symptoms,
+        duration: appointment.duration,
+        createdAt: appointment.createdAt,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -128,7 +106,7 @@ export async function GET(request: NextRequest) {
     console.error("Get patient appointments error:", error);
     return NextResponse.json(
       { success: false, message: "Wystąpił błąd serwera" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

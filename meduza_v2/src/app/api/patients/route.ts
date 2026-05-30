@@ -20,6 +20,8 @@ interface PatientData {
     phone?: string;
     relationship?: string;
   };
+  notes?: string;
+  careStatus?: "active" | "needs-attention";
 }
 
 interface AppointmentWithPatient {
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
     const appointments = await Appointment.find({ doctorId: auth.userId })
       .populate(
         "patientId",
-        "firstName lastName email phone dateOfBirth gender bloodType allergies medications conditions emergencyContact",
+        "firstName lastName email phone dateOfBirth gender bloodType allergies medications conditions emergencyContact notes careStatus",
       )
       .sort({ createdAt: -1 });
 
@@ -120,19 +122,23 @@ export async function GET(req: NextRequest) {
           nextAppointmentId: nextAppointmentObj?._id?.toString() ?? null,
           totalVisits: patientAppointments.length,
           status:
-            upcomingAppointments.length > 0
-              ? "active"
-              : completedAppointments.length > 0
+            patient.careStatus === "needs-attention"
+              ? "needs-attention"
+              : upcomingAppointments.length > 0
                 ? "active"
-                : "inactive",
+                : completedAppointments.length > 0
+                  ? "active"
+                  : "inactive",
           avatar: null,
-          notes: `Pacjent miał ${patientAppointments.length} wizyt${
-            patientAppointments.length === 1
-              ? "ę"
-              : patientAppointments.length < 5
-                ? "y"
-                : ""
-          }`,
+          notes:
+            patient.notes ||
+            `Pacjent miał ${patientAppointments.length} wizyt${
+              patientAppointments.length === 1
+                ? "ę"
+                : patientAppointments.length < 5
+                  ? "y"
+                  : ""
+            }`,
         });
       }
     });

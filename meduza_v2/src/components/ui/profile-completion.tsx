@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface ProfileCompletionProps {
@@ -17,10 +17,23 @@ interface ProfileCompletionProps {
     licenseNumber?: string;
     bio?: string;
     phone?: string;
-    education?: any[];
-    certifications?: any[];
+    education?: Array<{
+      degree: string;
+      institution: string;
+      year: string;
+      description?: string;
+    }>;
+    certifications?: Array<{
+      name: string;
+      issuer: string;
+      year: string;
+      validUntil?: string;
+    }>;
     workplace?: string;
-    availableHours?: any;
+    availableHours?: Record<
+      string,
+      { start: string; end: string; available: boolean }
+    >;
   };
   className?: string;
 }

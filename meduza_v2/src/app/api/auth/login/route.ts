@@ -69,21 +69,29 @@ export async function POST(request: NextRequest) {
       gender: user.gender,
     };
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Pomyślnie zalogowano",
-        user: userData,
-        token,
-      },
-      {
-        headers: {
-          "Set-Cookie": `auth-role=${
-            user.role
-          }; Path=/; HttpOnly; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`,
-        },
-      }
-    );
+    const maxAge = 7 * 24 * 60 * 60;
+
+    const response = NextResponse.json({
+      success: true,
+      message: "Pomyślnie zalogowano",
+      user: userData,
+      token,
+    });
+
+    response.cookies.set("auth-role", user.role, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "strict",
+      maxAge,
+    });
+    response.cookies.set("auth-token", token, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "strict",
+      maxAge,
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

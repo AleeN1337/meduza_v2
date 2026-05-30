@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { User } from "@/models";
+import { User, IUser } from "@/models";
+import { FilterQuery } from "mongoose";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
 
     // Build query for active doctors
-    const query: any = {
+    const query: FilterQuery<IUser> = {
       role: "doctor",
       isActive: true,
     };

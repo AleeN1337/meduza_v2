@@ -19,9 +19,10 @@ function getAuth(req: NextRequest) {
 // PATCH: doctor can update appointment status, notes, diagnosis, symptoms
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const auth = getAuth(req);
     if (!auth) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function PATCH(
       prescription: true,
       cancellationReason: true,
     };
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body || {})) {
       if (allowed[k]) updates[k] = v;
     }
@@ -60,7 +61,7 @@ export async function PATCH(
     await connectDB();
 
     const updated = await Appointment.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(params.id), doctorId: auth.userId },
+      { _id: new mongoose.Types.ObjectId(id), doctorId: auth.userId },
       updates,
       { new: true },
     );

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import connectDB from "@/lib/db";
-import { Notification } from "@/models";
+import { Notification, INotification } from "@/models";
+import { FilterQuery } from "mongoose";
 
 // Helper function to verify JWT token
 function verifyToken(token: string) {
@@ -11,7 +12,7 @@ function verifyToken(token: string) {
       email: string;
       role: string;
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const since = searchParams.get("since");
 
     // Build query
-    const query: any = {
+    const query: FilterQuery<INotification> = {
       userId: decoded.userId,
     };
 
@@ -123,7 +124,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    let updateQuery: any = {};
+    const updateQuery: { read?: boolean } = {};
 
     if (action === "markAsRead") {
       updateQuery.read = true;
